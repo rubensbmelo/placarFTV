@@ -1,0 +1,1604 @@
+/* ============================================================
+   FuteVôlei — app.js  (versão limpa, sem duplicatas)
+   Fase 1: todos contra todos
+   Fase 2: partidas manuais
+   Ranking por jogador individual
+   Gerenciar duplas: trocar, remover, nova dupla
+   localStorage: salva tudo automaticamente
+============================================================ */
+
+const STORAGE_KEY = 'futevolei_v3';
+
+// ══════════════════════════════════════════════════════════
+//  TIMERS
+// ══════════════════════════════════════════════════════════
+let matchTimerInterval   = null;
+let matchStartTime       = null;
+let torneioTimerInterval = null;
+let torneioTimerBase     = null;
+let torneioElapsed       = 0;
+let matchStarted         = false;
+
+function fmtMS(ms) {
+  const s = Math.floor(ms / 1000), m = Math.floor(s / 60);
+  return `${String(m).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
+}
+function fmtHMS(ms) {
+  const s = Math.floor(ms / 1000);
+  const h = Math.floor(s / 3600), m = Math.floor((s%3600)/60);
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
+}
+
+function stopMatchTimer() {
+  clearInterval(matchTimerInterval);
+  return matchStartTime ? Date.now() - matchStartTime : 0;
+}
+
+function startTorneioTimer() {
+  clearInterval(torneioTimerInterval);
+  torneioTimerBase = Date.now();
+  torneioTimerInterval = setInterval(() => {
+    const total = torneioElapsed + (Date.now() - torneioTimerBase);
+    document.getElementById('torneioTimer').textContent = fmtHMS(total);
+  }, 1000);
+}
+function captureTorneioElapsed() {
+  if (torneioTimerBase) {
+    torneioElapsed += Date.now() - torneioTimerBase;
+    torneioTimerBase = null;
+  }
+  clearInterval(torneioTimerInterval);
+}
+function stopTorneioTimer() {
+  captureTorneioElapsed();
+  return torneioElapsed;
+}
+
+// ══════════════════════════════════════════════════════════
+//  ESTADO GLOBAL
+// ══════════════════════════════════════════════════════════
+let numDuplas    = 6;
+let streakLimit  = 2;
+let permMode     = 'leave';
+let eventDate    = '';
+let eventName    = '';
+
+let duplas       = [];
+let pendingSet   = new Set();
+let queue        = [];
+let wait         = {};
+let currentMatch = null;
+let histItems    = [];
+let doneCount    = 0;
+let totalMatches = 0;
+
+let fase         = 1;
+let fase2Matches = [];
+let fase2Index   = 0;
+
+let rankView     = 'player';
+
+// Gerenciar duplas
+let gdEditId = null;
+let swapSelA = null;
+let swapSelB = null;
+
+// ══════════════════════════════════════════════════════════
+//  LOCALSTORAGE
+// ══════════════════════════════════════════════════════════
+function saveState() {
+  captureTorneioElapsed();
+  if (torneioTimerBase === null && duplas.length > 0) startTorneioTimer();
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      numDuplas, streakLimit, permMode, eventDate, eventName,
+      duplas, pendingArray: [...pendingSet], totalMatches,
+      queue, wait, currentMatch,
+      histItems, doneCount,
+      fase, fase2Matches, fase2Index,
+      rodadaInicialDone, rodadaInicialPairs, rodadaInicialIdx,
+      torneioElapsed,
+    }));
+  } catch(e) { console.warn('localStorage cheio:', e); }
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return false;
+    const s = JSON.parse(raw);
+    numDuplas     = s.numDuplas    ?? 6;
+    streakLimit   = s.streakLimit  ?? 2;
+    permMode      = s.permMode     ?? 'leave';
+    eventDate     = s.eventDate    ?? '';
+    eventName     = s.eventName    ?? '';
+    duplas        = s.duplas       ?? [];
+    pendingSet    = new Set(s.pendingArray ?? []);
+    totalMatches  = s.totalMatches ?? 0;
+    queue         = s.queue        ?? [];
+    wait          = s.wait         ?? {};
+    currentMatch  = s.currentMatch ?? null;
+    histItems     = s.histItems    ?? [];
+    doneCount     = s.doneCount    ?? 0;
+    fase          = s.fase         ?? 1;
+    fase2Matches  = s.fase2Matches ?? [];
+    fase2Index    = s.fase2Index   ?? 0;
+    rodadaInicialDone  = s.rodadaInicialDone  ?? false;
+    rodadaInicialPairs = s.rodadaInicialPairs ?? [];
+    rodadaInicialIdx   = s.rodadaInicialIdx   ?? 0;
+    torneioElapsed = s.torneioElapsed ?? 0;
+    return duplas.length > 0;
+  } catch(e) { return false; }
+}
+
+function clearState() { localStorage.removeItem(STORAGE_KEY); }
+
+// ══════════════════════════════════════════════════════════
+//  SETUP UI
+// ══════════════════════════════════════════════════════════
+function stepDuplas(d) {
+  numDuplas = Math.max(2, Math.min(12, numDuplas + d));
+  document.getElementById('stepDuplas').textContent = numDuplas;
+  const total = numDuplas*(numDuplas-1)/2;
+  document.getElementById('lblDuplas').textContent = `${numDuplas} duplas · ${total} partidas`;
+  document.getElementById('infoN').textContent = `${numDuplas} duplas`;
+
+  const streakSection = document.getElementById('streakSection');
+  const infoDesc      = document.getElementById('infoDesc');
+
+  if (numDuplas >= 6) {
+    streakSection.style.display = 'none';
+    const pairs = Math.floor(numDuplas / 2);
+    infoDesc.innerHTML = `rodada inicial: <strong>${pairs} jogos</strong> em sequência. Depois: <strong>ganhou ou perdeu, sai da quadra</strong> — sempre entram as 2 próximas da fila. Espera máx.: <strong>~3 jogos</strong>.`;
+  } else if (numDuplas === 5) {
+    streakSection.style.display = 'none';
+    infoDesc.innerHTML = `<strong>vencedor espera 1 jogo</strong>, <strong>perdedor espera 2 jogos</strong>. Rodízio contínuo.`;
+  } else {
+    streakSection.style.display = 'block';
+    infoDesc.innerHTML = `<strong>vencedor fica na quadra</strong> até ${streakLimit}× vitória${streakLimit>1?'s':''} seguida${streakLimit>1?'s':''}. Perdedor vai pro fim da fila.`;
+  }
+  buildDuplasGrid();
+}
+
+function selStreak(n) {
+  streakLimit = n;
+  document.querySelectorAll('.tog-btn').forEach(b => b.classList.toggle('sel', +b.dataset.s === n));
+  // Atualizar info box se for 3-4 duplas
+  if (numDuplas <= 4) {
+    const infoDesc = document.getElementById('infoDesc');
+    if (infoDesc) infoDesc.innerHTML = `<strong>vencedor fica na quadra</strong> até ${n}× vitória${n>1?'s':''} seguida${n>1?'s':''}. Perdedor vai pro fim da fila.`;
+  }
+}
+
+function selPerm(m) {
+  permMode = m;
+  document.getElementById('permLeave').className = 'perm-btn' + (m==='leave' ? ' sel-leave' : '');
+  document.getElementById('permStay').className  = 'perm-btn' + (m==='stay'  ? ' sel-stay'  : '');
+}
+
+function buildDuplasGrid() {
+  const g = document.getElementById('duplasGrid');
+  const vals = [];
+  g.querySelectorAll('.fi').forEach(i => vals.push(i.value));
+  g.innerHTML = '';
+  for (let i = 0; i < numDuplas; i++) {
+    const row = document.createElement('div');
+    row.className = 'dupla-row';
+    row.innerHTML = `
+      <div class="dupla-num">${i+1}</div>
+      <input class="fi" placeholder="Jogador A" value="${vals[i*2]  ||''}" id="p1_${i}" maxlength="14">
+      <input class="fi" placeholder="Jogador B" value="${vals[i*2+1]||''}" id="p2_${i}" maxlength="14">`;
+    g.appendChild(row);
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+//  BARRA DO EVENTO
+// ══════════════════════════════════════════════════════════
+function renderEventBar() {
+  const bar      = document.getElementById('eventBar');
+  const resetBar = document.getElementById('resetBar');
+  const name     = document.getElementById('eventBarName');
+  const date     = document.getElementById('eventBarDate');
+
+  if (!eventDate && !eventName) {
+    bar.style.display      = 'none';
+    resetBar.style.display = 'flex'; // mostra só o botão de reset
+  } else {
+    bar.style.display      = 'flex';
+    resetBar.style.display = 'none'; // já tem o 🗑 dentro da barra do evento
+    name.textContent = eventName || 'Torneio de FuteVôlei';
+    if (eventDate) {
+      const d        = new Date(eventDate + 'T12:00:00');
+      const months   = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+      const weekdays = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+      date.textContent = `${weekdays[d.getDay()]}, ${d.getDate()} de ${months[d.getMonth()]} de ${d.getFullYear()}`;
+    } else {
+      date.textContent = '';
+    }
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+//  RESET / ZERAR TORNEIO
+// ══════════════════════════════════════════════════════════
+function confirmReset() {
+  const jogadas = doneCount || 0;
+  const msg = jogadas > 0
+    ? `Zerar o torneio?\n\n⚠️ Isso apagará:\n• ${jogadas} partida${jogadas>1?'s':''} jogada${jogadas>1?'s':''}\n• Todo o histórico e ranking\n• Configurações das duplas\n\nEssa ação não pode ser desfeita.`
+    : `Zerar o torneio?\n\nIsso limpará todas as configurações.`;
+  if (!confirm(msg)) return;
+  novoTorneio();
+}
+
+function novoTorneio() {
+  clearState();
+  location.reload();
+}
+
+// ══════════════════════════════════════════════════════════
+//  INICIAR TORNEIO
+// ══════════════════════════════════════════════════════════
+function startTorneio() {
+  clearState();
+  eventDate = document.getElementById('cfgDate').value || '';
+  eventName = document.getElementById('cfgEventName').value.trim() || '';
+
+  duplas = [];
+  for (let i = 0; i < numDuplas; i++) {
+    const p1 = document.getElementById(`p1_${i}`).value.trim() || `Dupla ${i+1} A`;
+    const p2 = document.getElementById(`p2_${i}`).value.trim() || `Dupla ${i+1} B`;
+    duplas.push({ id:i, p1, p2, j:0, v:0, d:0, saldo:0, pts:0, streak:0, inactive:false });
+  }
+
+  fase = 1;
+  pendingSet = new Set();
+  for (let a = 0; a < duplas.length; a++)
+    for (let b = a+1; b < duplas.length; b++)
+      pendingSet.add(`${a}-${b}`);
+  totalMatches = pendingSet.size;
+
+  doneCount = 0; histItems = [];
+  currentMatch = null;
+  fase2Matches = []; fase2Index = 0;
+  torneioElapsed = 0; torneioTimerBase = null;
+  matchStarted = false;
+
+  queue = duplas.map(d => d.id);
+  wait  = {}; duplas.forEach(d => wait[d.id] = 0);
+
+  // Construir rodada inicial: emparelha de 2 em 2
+  buildRodadaInicial();
+
+  goTab(1);
+  renderEventBar();
+  startTorneioTimer();
+  enterMatchArea();
+  saveState();
+  loadNextMatch();
+}
+
+// ══════════════════════════════════════════════════════════
+//  START MANUAL DA PARTIDA
+// ══════════════════════════════════════════════════════════
+function setMatchReady() {
+  matchStarted = false;
+  clearInterval(matchTimerInterval);
+  document.getElementById('matchTimer').textContent            = '⏱ 00:00';
+  document.getElementById('matchStartOverlay').style.display  = 'flex';
+  document.getElementById('scoreZone').style.opacity          = '0.3';
+  document.getElementById('scoreZone').style.pointerEvents    = 'none';
+  document.getElementById('finishBtn').style.display          = 'none';
+}
+
+function startMatch() {
+  if (matchStarted) return;
+  matchStarted = true;
+
+  // Esconder overlay de start no card normal
+  document.getElementById('matchStartOverlay').style.display = 'none';
+  document.getElementById('scoreZone').style.opacity         = '1';
+  document.getElementById('scoreZone').style.pointerEvents   = 'auto';
+  document.getElementById('finishBtn').style.display         = 'block';
+
+  // Abrir placar fullscreen
+  openFullscreen();
+  startMatchTimer();
+}
+
+function openFullscreen() {
+  if (!currentMatch) return;
+  const d1 = duplas[currentMatch.dA], d2 = duplas[currentMatch.dB];
+
+  // Sincronizar nomes
+  document.getElementById('fsNamesA').innerHTML =
+    `<span>${d1.p1}</span><span>${d1.p2}</span>`;
+  document.getElementById('fsNamesB').innerHTML =
+    `<span>${d2.p1}</span><span>${d2.p2}</span>`;
+
+  // Sincronizar placar
+  document.getElementById('fsScoreA').textContent = currentMatch.scoreA;
+  document.getElementById('fsScoreB').textContent = currentMatch.scoreB;
+
+  // Info da partida
+  document.getElementById('fsMatchNum').textContent = document.getElementById('matchNum').textContent;
+  document.getElementById('fsFaseTag').textContent  = fase === 1 ? 'Fase 1' : 'Fase 2';
+
+  // Mostrar overlay
+  document.getElementById('fsOverlay').classList.add('open');
+
+  // Tentar entrar em fullscreen real do browser
+  try {
+    const el = document.documentElement;
+    if (el.requestFullscreen) el.requestFullscreen();
+    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+  } catch(e) {}
+
+  // Bloquear rotação para landscape via lock API se disponível
+  try {
+    screen.orientation.lock('landscape').catch(()=>{});
+  } catch(e) {}
+}
+
+function closeFullscreen() {
+  document.getElementById('fsOverlay').classList.remove('open');
+  try {
+    if (document.exitFullscreen) document.exitFullscreen();
+    else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+  } catch(e) {}
+  try { screen.orientation.unlock(); } catch(e) {}
+}
+
+// Sobrescrever addScore/subScore para sincronizar com fullscreen
+function addScore(t) {
+  if (!currentMatch || !matchStarted) return;
+  if (t==='a') currentMatch.scoreA++; else currentMatch.scoreB++;
+  document.getElementById('snA').textContent = currentMatch.scoreA;
+  document.getElementById('snB').textContent = currentMatch.scoreB;
+  // Sincronizar fullscreen
+  document.getElementById('fsScoreA').textContent = currentMatch.scoreA;
+  document.getElementById('fsScoreB').textContent = currentMatch.scoreB;
+  // Animação de ponto
+  const fsEl = document.getElementById(t==='a' ? 'fsScoreA' : 'fsScoreB');
+  fsEl.classList.remove('fs-score-pop');
+  void fsEl.offsetWidth;
+  fsEl.classList.add('fs-score-pop');
+}
+function subScore(t) {
+  if (!currentMatch || !matchStarted) return;
+  if (t==='a' && currentMatch.scoreA>0) currentMatch.scoreA--;
+  else if (t==='b' && currentMatch.scoreB>0) currentMatch.scoreB--;
+  document.getElementById('snA').textContent = currentMatch.scoreA;
+  document.getElementById('snB').textContent = currentMatch.scoreB;
+  document.getElementById('fsScoreA').textContent = currentMatch.scoreA;
+  document.getElementById('fsScoreB').textContent = currentMatch.scoreB;
+}
+
+// Sincronizar timer com fullscreen
+const _origStartMatchTimer = startMatchTimer;
+function startMatchTimer() {
+  clearInterval(matchTimerInterval);
+  matchStartTime = Date.now();
+  document.getElementById('matchTimer').textContent = '⏱ 00:00';
+  document.getElementById('fsTimer').textContent    = '⏱ 00:00';
+  matchTimerInterval = setInterval(() => {
+    const t = '⏱ ' + fmtMS(Date.now() - matchStartTime);
+    document.getElementById('matchTimer').textContent = t;
+    document.getElementById('fsTimer').textContent    = t;
+  }, 1000);
+}
+
+// Fechar fullscreen ao finalizar
+function openFinish() {
+  closeFullscreen();
+  _doOpenFinish();
+}
+
+// ══════════════════════════════════════════════════════════
+//  SISTEMA DE FILA — varia por número de duplas
+//
+//  6 duplas : rodízio puro — ganhou ou perdeu, sai
+//             fila pós-rodada inicial: [V1,V2,V3,P1,P2,P3]
+//
+//  5 duplas : vencedor espera 1 jogo, perdedor espera 2
+//             fila: [rest[0], rest[1], winner, rest[2], loser]
+//
+//  3-4 duplas: vencedor fica (streak 2× ou 3×), perdedor sai
+//              ao atingir streak limit, vencedor sai também
+// ══════════════════════════════════════════════════════════
+
+let rodadaInicialDone  = false;
+let rodadaInicialPairs = [];
+let rodadaInicialIdx   = 0;
+
+function buildRodadaInicial() {
+  const ativas = duplas.filter(d => !d.inactive).map(d => d.id);
+  rodadaInicialPairs = [];
+  for (let i = 0; i + 1 < ativas.length; i += 2)
+    rodadaInicialPairs.push({ dA: ativas[i], dB: ativas[i+1] });
+  rodadaInicialIdx  = 0;
+  rodadaInicialDone = false;
+}
+
+function pairKey(a, b) { return a < b ? `${a}-${b}` : `${b}-${a}`; }
+
+function nAtivas() {
+  return duplas.filter(d => !d.inactive).length;
+}
+
+function findNextMatch() {
+  const n = nAtivas();
+
+  // ── 6+ duplas: rodízio + round-robin ──
+  if (n >= 6) {
+    if (!rodadaInicialDone) {
+      if (rodadaInicialIdx < rodadaInicialPairs.length)
+        return rodadaInicialPairs[rodadaInicialIdx];
+      rodadaInicialDone = true;
+    }
+    // Primeiros 2 da fila com confronto pendente
+    const ativas = queue.filter(id => !duplas[id]?.inactive);
+    for (let i = 0; i < ativas.length; i++)
+      for (let j = i+1; j < ativas.length; j++)
+        if (pendingSet.has(pairKey(ativas[i], ativas[j])))
+          return { dA: ativas[i], dB: ativas[j] };
+    return null;
+  }
+
+  // ── 5 duplas: sempre os 2 primeiros da fila ──
+  if (n === 5) {
+    const ativas = queue.filter(id => !duplas[id]?.inactive);
+    if (ativas.length >= 2) return { dA: ativas[0], dB: ativas[1] };
+    return null;
+  }
+
+  // ── 3-4 duplas: sempre os 2 primeiros da fila ──
+  if (n <= 4) {
+    const ativas = queue.filter(id => !duplas[id]?.inactive);
+    if (ativas.length >= 2) return { dA: ativas[0], dB: ativas[1] };
+    return null;
+  }
+
+  return null;
+}
+
+function updateQueueAfterMatch(winner, loser) {
+  const n = nAtivas();
+
+  // ── 6+ duplas: rodízio puro — ambos vão pro fim ──
+  if (n >= 6) {
+    queue = queue.filter(id => id !== winner && id !== loser);
+    queue = [...queue, winner, loser];
+    return;
+  }
+
+  // ── 5 duplas: vencedor espera 1, perdedor espera 2 ──
+  if (n === 5) {
+    const rest = queue.filter(id => id !== winner && id !== loser && !duplas[id]?.inactive);
+    // [rest[0], rest[1], winner, rest[2], loser]
+    queue = [
+      ...(rest[0] !== undefined ? [rest[0]] : []),
+      ...(rest[1] !== undefined ? [rest[1]] : []),
+      winner,
+      ...(rest[2] !== undefined ? [rest[2]] : []),
+      loser,
+    ];
+    return;
+  }
+
+  // ── 3-4 duplas: streak — vencedor fica, perdedor sai ──
+  if (n <= 4) {
+    const atLimit = streakLimit < 99 && duplas[winner].streak >= streakLimit;
+    if (atLimit) {
+      duplas[winner].streak = 0;
+      // Vencedor sai também — entra o próximo par
+      const rest = queue.filter(id => id !== winner && id !== loser && !duplas[id]?.inactive);
+      if (n === 4) {
+        // 4 duplas: rest[0]×rest[1], winner e loser pro fim
+        queue = [...rest, winner, loser];
+      } else {
+        // 3 duplas: rest[0] entra, loser fica na frente, winner pro fim
+        queue = [rest[0] ?? loser, loser, winner].filter((v,i,a)=>a.indexOf(v)===i);
+      }
+    } else {
+      // Vencedor fica na frente, perdedor e restantes seguem
+      const rest = queue.filter(id => id !== winner && id !== loser && !duplas[id]?.inactive);
+      queue = [winner, ...rest, loser];
+    }
+  }
+}
+
+function previewNextMatchesF1(n = 3) {
+  const results = [];
+  let simDone  = rodadaInicialDone;
+  let simIdx   = rodadaInicialIdx;
+  let simQueue = [...queue];
+  let simPend  = new Set(pendingSet);
+  const nDup   = nAtivas();
+
+  for (let step = 0; step < n; step++) {
+    let found = null;
+
+    if (nDup >= 6 && !simDone) {
+      if (simIdx < rodadaInicialPairs.length) {
+        found = rodadaInicialPairs[simIdx++];
+        if (simIdx >= rodadaInicialPairs.length) simDone = true;
+      } else simDone = true;
+    }
+
+    if (!found) {
+      const ativas = simQueue.filter(id => !duplas[id]?.inactive);
+      if (nDup >= 6) {
+        outer:
+        for (let i = 0; i < ativas.length; i++)
+          for (let j = i+1; j < ativas.length; j++)
+            if (simPend.has(pairKey(ativas[i], ativas[j]))) {
+              found = { dA: ativas[i], dB: ativas[j] };
+              break outer;
+            }
+      } else {
+        if (ativas.length >= 2) found = { dA: ativas[0], dB: ativas[1] };
+      }
+    }
+
+    if (!found) break;
+    results.push(found);
+
+    const {dA, dB} = found;
+    simPend.delete(pairKey(dA, dB));
+    // Simular fila simples: ambos pro fim
+    simQueue = simQueue.filter(id => id !== dA && id !== dB);
+    simQueue = [...simQueue, dA, dB];
+  }
+  return results;
+}
+
+// ══════════════════════════════════════════════════════════
+//  CARREGAR PRÓXIMA PARTIDA
+// ══════════════════════════════════════════════════════════
+function loadNextMatch() {
+  if (fase === 1) {
+    const r = findNextMatch();
+    if (!r) { showFase1End(); return; }
+    setupMatch(r.dA, r.dB);
+  } else {
+    if (fase2Index >= fase2Matches.length) { showFase2Paused(); return; }
+    const m = fase2Matches[fase2Index];
+    setupMatch(m.dA, m.dB);
+  }
+}
+
+function setupMatch(dA, dB) {
+  currentMatch = { dA, dB, scoreA:0, scoreB:0 };
+  const d1 = duplas[dA], d2 = duplas[dB];
+
+  // Progress
+  if (fase === 1) {
+    const pct = totalMatches > 0 ? Math.round(doneCount / totalMatches * 100) : 0;
+    document.getElementById('progressFill').style.width = pct + '%';
+    document.getElementById('progressTxt').textContent  = `Fase 1 · ${doneCount} de ${totalMatches} partidas`;
+    document.getElementById('progressPct').textContent  = pct + '%';
+    document.getElementById('faseTag').textContent      = '🏁 FASE 1 — Todos contra Todos';
+    document.getElementById('faseTag').className        = 'fase-tag fase1';
+    document.getElementById('pullBtn').style.display    = 'block';
+    document.getElementById('proximasCard').style.display = 'block';
+    renderProximas();
+  } else {
+    const pct = fase2Matches.length > 0 ? Math.round(fase2Index / fase2Matches.length * 100) : 0;
+    document.getElementById('progressFill').style.width = pct + '%';
+    document.getElementById('progressTxt').textContent  = `Fase 2 · Partida ${fase2Index+1} de ${fase2Matches.length}`;
+    document.getElementById('progressPct').textContent  = pct + '%';
+    document.getElementById('faseTag').textContent      = '⚡ FASE 2 — Partidas Livres';
+    document.getElementById('faseTag').className        = 'fase-tag fase2';
+    document.getElementById('pullBtn').style.display    = 'none';
+    renderProximasF2();
+  }
+
+  document.getElementById('matchNum').textContent = `Partida ${doneCount + 1}`;
+
+  // Streak
+  const ctx = [];
+  if (d1.streak > 0 && streakLimit < 99) ctx.push(`${d1.p1}: ${d1.streak}✓`);
+  if (d2.streak > 0 && streakLimit < 99) ctx.push(`${d2.p1}: ${d2.streak}✓`);
+  document.getElementById('matchContext').textContent = ctx.join(' · ');
+
+  const badges = document.getElementById('matchBadges');
+  badges.innerHTML = '';
+  if (streakLimit < 99) {
+    [d1,d2].forEach(d => {
+      if (d.streak > 0) {
+        const sp = document.createElement('span');
+        sp.className = 'badge ' + (d.streak >= streakLimit ? 'streak-warn' : 'streak-ok');
+        sp.textContent = `${d.p1.split(' ')[0]}: ${d.streak}✓`;
+        badges.appendChild(sp);
+      }
+    });
+    const pp = document.createElement('span');
+    pp.className = 'badge ' + (permMode==='leave' ? 'perm-leave' : 'perm-stay');
+    pp.textContent = permMode==='leave' ? '🚪 Sai ao limite' : '🔥 Fica ao limite';
+    badges.appendChild(pp);
+  }
+
+  document.getElementById('mnA').innerHTML = `<div class="pname">${d1.p1}</div><div class="pname">${d1.p2}</div>`;
+  document.getElementById('mnB').innerHTML = `<div class="pname">${d2.p1}</div><div class="pname">${d2.p2}</div>`;
+  document.getElementById('snA').textContent = '0';
+  document.getElementById('snB').textContent = '0';
+
+  setMatchReady();
+  renderFila();
+  renderRanking();
+  saveState();
+}
+
+// ══════════════════════════════════════════════════════════
+//  PONTUAR
+// ══════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════
+//  FINALIZAR PARTIDA
+// ══════════════════════════════════════════════════════════
+function _doOpenFinish() {
+  if (!currentMatch) return;
+  const d1 = duplas[currentMatch.dA], d2 = duplas[currentMatch.dB];
+  document.getElementById('mfnA').textContent = `${d1.p1} & ${d1.p2}`;
+  document.getElementById('mfnB').textContent = `${d2.p1} & ${d2.p2}`;
+  document.getElementById('mfSA').value = currentMatch.scoreA;
+  document.getElementById('mfSB').value = currentMatch.scoreB;
+  document.getElementById('modalSub').textContent =
+    `${fase===1?'Fase 1':'Fase 2'} · Partida ${doneCount+1} — confirme o placar:`;
+  document.getElementById('modalFinish').classList.add('show');
+  setTimeout(() => document.getElementById('mfSA').select(), 100);
+}
+
+function confirmFinish() {
+  const sA = parseInt(document.getElementById('mfSA').value) || 0;
+  const sB = parseInt(document.getElementById('mfSB').value) || 0;
+  if (sA === sB) { alert('Placar não pode ser empate!'); return; }
+  closeModal('modalFinish');
+
+  const dur = stopMatchTimer();
+  const {dA, dB} = currentMatch;
+  const winner   = sA > sB ? dA : dB;
+  const loser    = sA > sB ? dB : dA;
+  const wSc = Math.max(sA,sB), lSc = Math.min(sA,sB);
+
+  duplas[winner].v++; duplas[winner].j++; duplas[winner].pts += 3;
+  duplas[winner].saldo += (wSc-lSc); duplas[winner].streak++;
+  duplas[loser].d++;  duplas[loser].j++;
+  duplas[loser].saldo -= (wSc-lSc);  duplas[loser].streak = 0;
+
+  if (fase !== 1) fase2Index++;
+  doneCount++;
+
+  histItems.unshift({
+    num: doneCount, fase: fase===1?'F1':'F2',
+    duplaAId: dA, duplaBId: dB,
+    p1a: duplas[dA].p1, p2a: duplas[dA].p2,
+    p1b: duplas[dB].p1, p2b: duplas[dB].p2,
+    sA, sB, winnerId: winner, duration: dur,
+  });
+  renderHistorico();
+
+  if (fase === 1) {
+    pendingSet.delete(pairKey(dA, dB));
+    const n = nAtivas();
+    if (n >= 6 && !rodadaInicialDone) {
+      rodadaInicialIdx++;
+      if (rodadaInicialIdx >= rodadaInicialPairs.length) {
+        rodadaInicialDone = true;
+        const todos = duplas.filter(d => !d.inactive).map(d => d.id);
+        const venc  = todos.filter(id => duplas[id].streak > 0);
+        const perd  = todos.filter(id => duplas[id].streak === 0);
+        queue = [...venc, ...perd];
+      } else {
+        queue = queue.filter(id => id !== dA && id !== dB);
+        queue = [...queue, winner, loser];
+      }
+    } else {
+      updateQueueAfterMatch(winner, loser);
+    }
+  }
+
+  renderRanking();
+  saveState();
+  loadNextMatch();
+}
+
+// ══════════════════════════════════════════════════════════
+//  TRANSIÇÕES DE FASE
+// ══════════════════════════════════════════════════════════
+function enterMatchArea() {
+  document.getElementById('matchArea').style.display    = 'block';
+  document.getElementById('fase1End').style.display     = 'none';
+  document.getElementById('fase2Builder').style.display = 'none';
+  document.getElementById('fase2Paused').style.display  = 'none';
+  document.getElementById('torneioEnd').style.display   = 'none';
+}
+
+function showFase1End() {
+  captureTorneioElapsed();
+  document.getElementById('matchArea').style.display = 'none';
+  document.getElementById('fase1End').style.display  = 'block';
+  renderRankingInline('rankingF1');
+  saveState();
+}
+
+function openFase2Builder() {
+  fase = 2; fase2Matches = []; fase2Index = 0;
+  document.getElementById('fase1End').style.display     = 'none';
+  document.getElementById('fase2Builder').style.display = 'block';
+  f2SelA = null; f2SelB = null;
+  renderFase2Builder();
+  saveState();
+}
+
+function startFase2() {
+  if (fase2Matches.length === 0) { alert('Adicione pelo menos uma partida!'); return; }
+  fase = 2; fase2Index = 0;
+  document.getElementById('fase2Builder').style.display = 'none';
+  enterMatchArea();
+  startTorneioTimer();
+  saveState();
+  loadNextMatch();
+}
+
+function showFase2Paused() {
+  captureTorneioElapsed();
+  document.getElementById('matchArea').style.display   = 'none';
+  document.getElementById('fase2Paused').style.display = 'block';
+  document.getElementById('f2pDone').textContent  = fase2Index;
+  document.getElementById('f2pTotal').textContent = fase2Matches.length;
+  renderRankingInline('rankingF2Paused');
+  renderHistorico();
+  saveState();
+}
+
+function adicionarMaisPartidas() {
+  fase2Matches = fase2Matches.slice(fase2Index);
+  fase2Index   = 0;
+  document.getElementById('fase2Paused').style.display  = 'none';
+  document.getElementById('fase2Builder').style.display = 'block';
+  f2SelA = null; f2SelB = null;
+  renderFase2Builder();
+  saveState();
+}
+
+function encerrarTorneio() {
+  const totalTime = stopTorneioTimer();
+  stopMatchTimer();
+  clearState();
+
+  document.getElementById('matchArea').style.display    = 'none';
+  document.getElementById('fase1End').style.display     = 'none';
+  document.getElementById('fase2Builder').style.display = 'none';
+  document.getElementById('fase2Paused').style.display  = 'none';
+  document.getElementById('torneioEnd').style.display   = 'block';
+
+  document.getElementById('torneioTimer').textContent = fmtHMS(totalTime);
+  document.querySelector('.tt-label').textContent = '✅ Duração total';
+
+  // ── Preencher tela de resultados ──
+  const playerStats = buildPlayerStats();
+  const sorted = playerStats.sort((a,b) =>
+    b.pts!==a.pts ? b.pts-a.pts : b.saldo!==a.saldo ? b.saldo-a.saldo : b.v-a.v
+  );
+
+  // Info do evento
+  const evInfo = document.getElementById('teEventInfo');
+  if (eventName || eventDate) {
+    const d = eventDate ? new Date(eventDate+'T12:00:00') : null;
+    const months = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    const dateStr = d ? `${d.getDate()} de ${months[d.getMonth()]} de ${d.getFullYear()}` : '';
+    evInfo.textContent = [eventName, dateStr].filter(Boolean).join(' · ');
+  } else {
+    evInfo.style.display = 'none';
+  }
+
+  // Stats gerais
+  const avgMs = histItems.length > 0
+    ? histItems.reduce((s,h) => s+(h.duration||0), 0) / histItems.length : 0;
+  document.getElementById('teTotal').textContent   = histItems.length;
+  document.getElementById('teDuracao').textContent = fmtHMS(totalTime);
+  document.getElementById('teMedia').textContent   = avgMs > 0 ? fmtMS(avgMs) : '--:--';
+
+  // Pódio top 3
+  const podioData = [
+    { id:'podio1', nameId:'podio1Name', ptsId:'podio1Pts' },
+    { id:'podio2', nameId:'podio2Name', ptsId:'podio2Pts' },
+    { id:'podio3', nameId:'podio3Name', ptsId:'podio3Pts' },
+  ];
+  podioData.forEach((p, i) => {
+    const player = sorted[i];
+    if (player) {
+      document.getElementById(p.nameId).textContent = player.name;
+      document.getElementById(p.ptsId).textContent  =
+        `${player.pts}pts · ${player.v}V · saldo ${player.saldo>0?'+':''}${player.saldo}`;
+      document.getElementById(p.id).style.display = 'flex';
+    } else {
+      document.getElementById(p.id).style.display = 'none';
+    }
+  });
+
+  // Destaques
+  const grid = document.getElementById('teDestaquesGrid');
+  grid.innerHTML = '';
+
+  const destaques = [];
+
+  // Mais vitórias
+  const mvp = sorted[0];
+  if (mvp) destaques.push({ icon:'🏆', label:'Mais Vitórias', value: mvp.name, sub: `${mvp.v} vitórias` });
+
+  // Maior saldo
+  const mSaldo = [...sorted].sort((a,b) => b.saldo-a.saldo)[0];
+  if (mSaldo) destaques.push({ icon:'📈', label:'Maior Saldo', value: mSaldo.name, sub: `+${mSaldo.saldo} pontos` });
+
+  // Mais jogos
+  const mJogos = [...sorted].sort((a,b) => b.j-a.j)[0];
+  if (mJogos) destaques.push({ icon:'💪', label:'Mais Dedicado', value: mJogos.name, sub: `${mJogos.j} jogos disputados` });
+
+  // Lanterna
+  const lanterna = sorted[sorted.length - 1];
+  if (lanterna && sorted.length > 1) destaques.push({ icon:'🏳️', label:'Lanterna do Dia', value: lanterna.name, sub: `${lanterna.pts}pts · ${lanterna.d}D` });
+
+  // Partida mais emocionante (menor diferença de pontos)
+  const emocionante = [...histItems].sort((a,b) => Math.abs(a.sA-a.sB) - Math.abs(b.sA-b.sB))[0];
+  if (emocionante) destaques.push({
+    icon:'😱', label:'Partida Mais Emocionante',
+    value: `${emocionante.p1a} & ${emocionante.p2a} × ${emocionante.p1b} & ${emocionante.p2b}`,
+    sub: `${emocionante.sA} × ${emocionante.sB}`
+  });
+
+  // Partida mais rápida
+  const rapida = [...histItems].filter(h=>h.duration>0).sort((a,b)=>a.duration-b.duration)[0];
+  if (rapida) destaques.push({
+    icon:'⚡', label:'Partida Mais Rápida',
+    value: `${rapida.p1a} & ${rapida.p2a} × ${rapida.p1b} & ${rapida.p2b}`,
+    sub: `⏱ ${fmtMS(rapida.duration)} · ${rapida.sA}×${rapida.sB}`
+  });
+
+  // Partida mais longa
+  const longa = [...histItems].filter(h=>h.duration>0).sort((a,b)=>b.duration-a.duration)[0];
+  if (longa && longa !== rapida) destaques.push({
+    icon:'🕐', label:'Partida Mais Longa',
+    value: `${longa.p1a} & ${longa.p2a} × ${longa.p1b} & ${longa.p2b}`,
+    sub: `⏱ ${fmtMS(longa.duration)} · ${longa.sA}×${longa.sB}`
+  });
+
+  destaques.forEach(d => {
+    const card = document.createElement('div');
+    card.className = 'te-destaque-card';
+    card.innerHTML = `
+      <div class="ted-icon">${d.icon}</div>
+      <div class="ted-content">
+        <div class="ted-label">${d.label}</div>
+        <div class="ted-value">${d.value}</div>
+        <div class="ted-sub">${d.sub}</div>
+      </div>`;
+    grid.appendChild(card);
+  });
+
+  // Ranking completo
+  renderRankingTo(document.getElementById('teRankingBody'), sorted);
+
+  // Winner overlay
+  document.getElementById('wNames').textContent = sorted[0]?.name || '';
+  document.getElementById('wStats').textContent =
+    `${sorted[0]?.v} vitórias · ${sorted[0]?.pts} pts · saldo ${sorted[0]?.saldo>0?'+':''}${sorted[0]?.saldo}`;
+  document.getElementById('winnerOv').classList.add('show');
+  launchConfetti();
+}
+
+function closeWinner() {
+  document.getElementById('winnerOv').classList.remove('show');
+  document.querySelectorAll('.cfp').forEach(c => c.remove());
+  goTab(2);
+}
+
+// ══════════════════════════════════════════════════════════
+//  FASE 2 — BUILDER MANUAL
+// ══════════════════════════════════════════════════════════
+let f2SelA = null, f2SelB = null;
+
+function renderFase2Builder() {
+  const list = document.getElementById('f2MatchList');
+  list.innerHTML = '';
+  fase2Matches.forEach((m, i) => {
+    const d1 = duplas[m.dA], d2 = duplas[m.dB];
+    const item = document.createElement('div');
+    item.className = 'f2-match-item';
+    item.innerHTML = `
+      <div class="f2-match-num">${i+1}</div>
+      <div class="f2-match-teams">
+        <span class="f2ta">${d1.p1} & ${d1.p2}</span>
+        <span class="f2tx">×</span>
+        <span class="f2tb">${d2.p1} & ${d2.p2}</span>
+      </div>
+      <button class="f2-del" onclick="removeFase2Match(${i})">✕</button>`;
+    list.appendChild(item);
+  });
+  if (fase2Matches.length === 0)
+    list.innerHTML = '<div class="f2-empty">Nenhuma partida adicionada ainda</div>';
+
+  const countEl = document.getElementById('f2MatchCount');
+  if (countEl) countEl.textContent = fase2Matches.length;
+
+  renderFase2Selector();
+}
+
+function renderFase2Selector() {
+  const sel = document.getElementById('f2Selector');
+  sel.innerHTML = '';
+  duplas.filter(d => !d.inactive).forEach(d => {
+    const btn = document.createElement('button');
+    btn.className = 'f2-dupla-btn'
+      + (f2SelA===d.id ? ' sel-a' : f2SelB===d.id ? ' sel-b' : '');
+    btn.textContent = `${d.p1} & ${d.p2}`;
+    btn.onclick = () => selectF2Dupla(d.id);
+    sel.appendChild(btn);
+  });
+
+  const preview = document.getElementById('f2Preview');
+  if (f2SelA !== null && f2SelB !== null) {
+    const d1 = duplas[f2SelA], d2 = duplas[f2SelB];
+    preview.innerHTML = `
+      <div class="f2-preview-inner">
+        <span class="f2ta">${d1.p1} & ${d1.p2}</span>
+        <span class="f2tx">×</span>
+        <span class="f2tb">${d2.p1} & ${d2.p2}</span>
+        <button class="f2-add-btn" onclick="addFase2Match()">+ Adicionar</button>
+      </div>`;
+  } else {
+    preview.innerHTML = `<div class="f2-preview-hint">
+      ${f2SelA===null ? 'Selecione a Dupla A (🟡)' : 'Agora selecione a Dupla B (🔵)'}
+    </div>`;
+  }
+}
+
+function selectF2Dupla(id) {
+  if (f2SelA === null) { f2SelA = id; }
+  else if (f2SelB === null && id !== f2SelA) { f2SelB = id; }
+  else { f2SelA = id; f2SelB = null; }
+  renderFase2Selector();
+}
+
+function addFase2Match() {
+  if (f2SelA === null || f2SelB === null) return;
+  fase2Matches.push({ dA: f2SelA, dB: f2SelB });
+  f2SelA = null; f2SelB = null;
+  saveState();
+  renderFase2Builder();
+}
+
+function removeFase2Match(idx) {
+  fase2Matches.splice(idx, 1);
+  saveState();
+  renderFase2Builder();
+}
+
+// ══════════════════════════════════════════════════════════
+//  PUXAR JOGO — FASE 1
+// ══════════════════════════════════════════════════════════
+function openPullMatch() {
+  const suggested = findNextMatchF1();
+  const list = document.getElementById('pullList');
+  list.innerHTML = '';
+
+  const allPairs = [];
+  for (const key of pendingSet) {
+    const [a,b] = key.split('-').map(Number);
+    const maxWait = Math.max(wait[a]||0, wait[b]||0);
+    const isSug   = suggested &&
+      ((suggested.dA===a&&suggested.dB===b)||(suggested.dA===b&&suggested.dB===a));
+    allPairs.push({ a, b, maxWait, isSug });
+  }
+  allPairs.sort((x,y) => x.isSug!==y.isSug?(x.isSug?-1:1):y.maxWait-x.maxWait);
+
+  allPairs.forEach(({a,b,maxWait,isSug}) => {
+    const d1=duplas[a], d2=duplas[b];
+    const item=document.createElement('div');
+    item.className='pull-item'+(isSug?' suggested':'');
+    let tc='normal', tt='pendente';
+    if (isSug)                 { tc='sug';  tt='⭐ sugerido'; }
+    else if (maxWait>=numDuplas-2) { tc='wait'; tt=`espera ${maxWait}j`; }
+    else if (maxWait>0)        { tc='normal'; tt=`espera ${maxWait}j`; }
+    item.innerHTML=`
+      <div class="pull-teams">
+        <span class="pta">${d1.p1} & ${d1.p2}</span>
+        <span class="ptx">×</span>
+        <span class="ptb">${d2.p1} & ${d2.p2}</span>
+      </div>
+      <span class="pull-tag ${tc}">${tt}</span>`;
+    item.onclick=()=>pullMatch(a,b);
+    list.appendChild(item);
+  });
+  document.getElementById('modalPull').classList.add('show');
+}
+
+function pullMatch(dA, dB) {
+  closeModal('modalPull');
+  queue = [dA, dB, ...queue.filter(id=>id!==dA&&id!==dB)];
+  loadNextMatch();
+}
+
+// ══════════════════════════════════════════════════════════
+//  RENDER
+// ══════════════════════════════════════════════════════════
+function renderFila() {
+  const chips = document.getElementById('filaChips');
+  chips.innerHTML = '';
+  if (!currentMatch) return;
+  const {dA, dB} = currentMatch;
+
+  if (!rodadaInicialDone) {
+    [dA, dB].forEach(id => {
+      const d = duplas[id];
+      const chip = document.createElement('div');
+      chip.className = 'fila-chip em-quadra';
+      chip.innerHTML = `<div class="fc-pos">🏐 em quadra</div><div class="fc-name">${d.p1}<br>${d.p2}</div>`;
+      chips.appendChild(chip);
+    });
+    for (let i = rodadaInicialIdx + 1; i < rodadaInicialPairs.length; i++) {
+      const par = rodadaInicialPairs[i];
+      [par.dA, par.dB].forEach(id => {
+        const d = duplas[id];
+        const chip = document.createElement('div');
+        chip.className = 'fila-chip';
+        chip.innerHTML = `<div class="fc-pos">Jogo ${i+1} – aguarda</div><div class="fc-name">${d.p1}<br>${d.p2}</div>`;
+        chips.appendChild(chip);
+      });
+    }
+    const emJogo = new Set(rodadaInicialPairs.flatMap(p => [p.dA, p.dB]));
+    duplas.filter(d => !d.inactive && !emJogo.has(d.id)).forEach(d => {
+      const chip = document.createElement('div');
+      chip.className = 'fila-chip urgente';
+      chip.innerHTML = `<div class="fc-pos">aguarda rodada</div><div class="fc-name">${d.p1}<br>${d.p2}</div>`;
+      chips.appendChild(chip);
+    });
+    return;
+  }
+
+  queue.forEach((id, idx) => {
+    const d = duplas[id];
+    if (!d || d.inactive) return;
+    const onCourt = id === dA || id === dB;
+    const chip = document.createElement('div');
+    chip.className = 'fila-chip' + (onCourt ? ' em-quadra' : '');
+    const pos = onCourt ? '🏐 em quadra' : `${idx + 1}º na fila`;
+    chip.innerHTML = `
+      <div class="fc-pos">${pos}</div>
+      <div class="fc-name">${d.p1}<br>${d.p2}</div>`;
+    chips.appendChild(chip);
+  });
+}
+
+function renderProximas() {
+  const previews = previewNextMatchesF1(3);
+  const list = document.getElementById('proximasList');
+  list.innerHTML = '';
+  previews.forEach((m,i) => {
+    const d1=duplas[m.dA], d2=duplas[m.dB];
+    const item=document.createElement('div'); item.className='prox-item';
+    item.innerHTML=`
+      <div class="prox-num">${doneCount+2+i}</div>
+      <div class="prox-teams">
+        <span class="pa">${d1.p1} & ${d1.p2}</span>
+        <span class="px">×</span>
+        <span class="pb">${d2.p1} & ${d2.p2}</span>
+      </div>`;
+    list.appendChild(item);
+  });
+  document.getElementById('proximasCard').style.display = previews.length ? 'block' : 'none';
+}
+
+function renderProximasF2() {
+  const list = document.getElementById('proximasList');
+  list.innerHTML = '';
+  const rest = fase2Matches.slice(fase2Index+1, fase2Index+4);
+  rest.forEach((m,i) => {
+    const d1=duplas[m.dA], d2=duplas[m.dB];
+    const item=document.createElement('div'); item.className='prox-item';
+    item.innerHTML=`
+      <div class="prox-num">${fase2Index+2+i}</div>
+      <div class="prox-teams">
+        <span class="pa">${d1.p1} & ${d1.p2}</span>
+        <span class="px">×</span>
+        <span class="pb">${d2.p1} & ${d2.p2}</span>
+      </div>`;
+    list.appendChild(item);
+  });
+  document.getElementById('proximasCard').style.display = rest.length ? 'block' : 'none';
+}
+
+function renderRanking() {
+  const body = document.getElementById('rankingBody');
+  if (body) renderRankingTo(body);
+  if (rankView === 'player') renderPlayerRanking();
+}
+
+function renderRankingTo(body, sortedOverride) {
+  if (!body) return;
+  body.innerHTML = '';
+  const sorted = sortedOverride || [...duplas].sort((a,b)=>b.pts!==a.pts?b.pts-a.pts:b.saldo!==a.saldo?b.saldo-a.saldo:b.v-a.v);
+  sorted.forEach((d,i) => {
+    const pos=i+1, medal=pos===1?'🥇':pos===2?'🥈':pos===3?'🥉':pos;
+    const sc=d.saldo>=0?'sp':'sn';
+    const row=document.createElement('div'); row.className='rt-row';
+    row.innerHTML=`
+      <div class="rt-pos">${medal}</div>
+      <div class="rt-name">${d.p1}<br><span>${d.p2}</span>${d.inactive?'<span class="gd-tag-out">fora</span>':''}</div>
+      <div class="rt-cell">${d.j}</div>
+      <div class="rt-cell v">${d.v}</div>
+      <div class="rt-cell">${d.d}</div>
+      <div class="rt-cell ${sc}">${d.saldo>0?'+':''}${d.saldo}</div>
+      <div class="rt-cell pts">${d.pts}</div>`;
+    body.appendChild(row);
+  });
+}
+
+function renderRankingInline(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.innerHTML = '';
+  const stats  = buildPlayerStats();
+  const sorted = stats.sort((a,b)=>b.pts!==a.pts?b.pts-a.pts:b.saldo!==a.saldo?b.saldo-a.saldo:b.v-a.v);
+  if (sorted.length === 0) return;
+  sorted.forEach((p,i) => {
+    const pos=i+1, medal=pos===1?'🥇':pos===2?'🥈':pos===3?'🥉':pos;
+    const sc=p.saldo>=0?'sp':'sn';
+    const row=document.createElement('div'); row.className='rt-row rt-row-player';
+    row.innerHTML=`
+      <div class="rt-pos">${medal}</div>
+      <div class="rt-name-player">
+        <div class="rtp-name">${p.name}</div>
+        <div class="rtp-duplas">${p.duplas.join(' · ')}</div>
+      </div>
+      <div class="rt-cell">${p.j}</div>
+      <div class="rt-cell v">${p.v}</div>
+      <div class="rt-cell">${p.d}</div>
+      <div class="rt-cell ${sc}">${p.saldo>0?'+':''}${p.saldo}</div>
+      <div class="rt-cell pts">${p.pts}</div>`;
+    el.appendChild(row);
+  });
+}
+
+function renderHistorico() {
+  const list = document.getElementById('histList');
+  list.innerHTML = '';
+  if (!histItems.length) {
+    list.innerHTML = '<div class="empty-hist">Nenhuma partida jogada ainda</div>';
+    return;
+  }
+  histItems.forEach(h => {
+    const winA = h.sA > h.sB;
+    const ts   = h.duration ? fmtMS(h.duration) : '';
+    const item = document.createElement('div'); item.className='hist-item';
+    item.innerHTML=`
+      <div class="hist-n">
+        <div>#${h.num}</div>
+        <div class="hist-fase">${h.fase||'F1'}</div>
+      </div>
+      <div class="hist-teams">
+        <span class="ha" style="${winA?'':'opacity:.45'}">${h.p1a} & ${h.p2a}</span>
+        <span class="hx">×</span>
+        <span class="hb" style="${!winA?'':'opacity:.45'}">${h.p1b} & ${h.p2b}</span>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;">
+        <div class="hist-score">${h.sA} × ${h.sB}</div>
+        ${ts?`<div class="hist-time">⏱ ${ts}</div>`:''}
+      </div>`;
+    list.appendChild(item);
+  });
+}
+
+// ══════════════════════════════════════════════════════════
+//  RANKING POR JOGADOR
+// ══════════════════════════════════════════════════════════
+function setRankView(view) {
+  rankView = view;
+  document.getElementById('rankViewPlayer').style.display = view==='player' ? 'block' : 'none';
+  document.getElementById('rankViewDupla').style.display  = view==='dupla'  ? 'block' : 'none';
+  document.getElementById('rankTogPlayer').classList.toggle('active', view==='player');
+  document.getElementById('rankTogDupla').classList.toggle('active', view==='dupla');
+  if (view==='player') renderPlayerRanking();
+  if (view==='dupla')  renderRankingTo(document.getElementById('rankingBody'));
+}
+
+function buildPlayerStats() {
+  const players = {};
+  function get(name) {
+    const key = name.trim().toLowerCase();
+    if (!players[key]) players[key] = { name:name.trim(), j:0, v:0, d:0, saldo:0, pts:0, duplas:new Set() };
+    return players[key];
+  }
+  histItems.forEach(h => {
+    const winnerDupla = duplas.find(d => d.id === h.winnerId);
+    const teamANames  = [h.p1a.trim().toLowerCase(), h.p2a.trim().toLowerCase()];
+    const winnerIsA   = winnerDupla
+      ? (winnerDupla.p1.trim().toLowerCase()===teamANames[0] || winnerDupla.p1.trim().toLowerCase()===teamANames[1])
+      : h.sA > h.sB;
+    const saldo = Math.abs(h.sA - h.sB);
+
+    [h.p1a, h.p2a].forEach(n => {
+      const p = get(n); p.j++; p.duplas.add(`${h.p1a} & ${h.p2a}`);
+      if (winnerIsA) { p.v++; p.pts+=3; p.saldo+=saldo; } else { p.d++; p.saldo-=saldo; }
+    });
+    [h.p1b, h.p2b].forEach(n => {
+      const p = get(n); p.j++; p.duplas.add(`${h.p1b} & ${h.p2b}`);
+      if (!winnerIsA) { p.v++; p.pts+=3; p.saldo+=saldo; } else { p.d++; p.saldo-=saldo; }
+    });
+  });
+  return Object.values(players).map(p => ({...p, duplas:[...p.duplas]}));
+}
+
+function renderPlayerRanking() {
+  const stats  = buildPlayerStats();
+  const sorted = stats.sort((a,b)=>b.pts!==a.pts?b.pts-a.pts:b.saldo!==a.saldo?b.saldo-a.saldo:b.v-a.v);
+  const body   = document.getElementById('rankingPlayerBody');
+  if (!body) return;
+  body.innerHTML = '';
+  if (sorted.length === 0) {
+    body.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-size:.8rem;letter-spacing:2px;text-transform:uppercase">Nenhuma partida jogada ainda</div>';
+    return;
+  }
+  sorted.forEach((p,i) => {
+    const pos=i+1, medal=pos===1?'🥇':pos===2?'🥈':pos===3?'🥉':pos;
+    const sc=p.saldo>=0?'sp':'sn';
+    const row=document.createElement('div'); row.className='rt-row rt-row-player';
+    row.innerHTML=`
+      <div class="rt-pos">${medal}</div>
+      <div class="rt-name-player">
+        <div class="rtp-name">${p.name}</div>
+        <div class="rtp-duplas">${p.duplas.join(' · ')}</div>
+      </div>
+      <div class="rt-cell">${p.j}</div>
+      <div class="rt-cell v">${p.v}</div>
+      <div class="rt-cell">${p.d}</div>
+      <div class="rt-cell ${sc}">${p.saldo>0?'+':''}${p.saldo}</div>
+      <div class="rt-cell pts">${p.pts}</div>`;
+    body.appendChild(row);
+  });
+}
+
+// ══════════════════════════════════════════════════════════
+//  GERENCIAR DUPLAS
+// ══════════════════════════════════════════════════════════
+function renderGerenciarDuplas() {
+  renderGdList();
+  renderGdSwapGrid();
+}
+
+function renderGdList() {
+  const list = document.getElementById('gdDuplasList');
+  list.innerHTML = '';
+  duplas.forEach(d => {
+    const pendF1 = fase===1
+      ? [...pendingSet].filter(k=>{const[a,b]=k.split('-').map(Number);return a===d.id||b===d.id;}).length
+      : 0;
+    const card = document.createElement('div');
+    card.className = 'gd-card' + (d.inactive ? ' gd-inactive' : '');
+    card.innerHTML = `
+      <div class="gd-card-left">
+        <div class="gd-names">
+          <span class="gd-p1">${d.p1}</span>
+          <span class="gd-amp">&amp;</span>
+          <span class="gd-p2">${d.p2}</span>
+          ${d.inactive ? '<span class="gd-tag-out">fora</span>' : ''}
+        </div>
+        <div class="gd-stats">
+          ${d.j}J · ${d.v}V · ${d.d}D · ${d.pts}pts
+          ${!d.inactive && pendF1>0 ? `<span class="gd-pend"> · ${pendF1} pend.</span>` : ''}
+        </div>
+      </div>
+      <div class="gd-card-right">
+        <button class="gd-btn-edit" onclick="openGdEdit(${d.id})">✏️</button>
+      </div>`;
+    list.appendChild(card);
+  });
+}
+
+function openGdEdit(id) {
+  gdEditId = id;
+  const d  = duplas.find(x => x.id===id);
+  document.getElementById('gdEditTitle').textContent = `${d.p1} & ${d.p2}`;
+  document.getElementById('gdEditStats').textContent = `${d.j} jogos · ${d.v} vitórias · ${d.pts} pts`;
+  document.getElementById('gdP1').value = d.p1;
+  document.getElementById('gdP2').value = d.p2;
+  document.getElementById('gdBtnRemove').style.display  = d.inactive ? 'none'  : 'block';
+  document.getElementById('gdBtnRestore').style.display = d.inactive ? 'block' : 'none';
+  document.getElementById('modalGdEdit').classList.add('show');
+}
+
+function gdSaveNames() {
+  const d  = duplas.find(x => x.id===gdEditId);
+  const p1 = document.getElementById('gdP1').value.trim();
+  const p2 = document.getElementById('gdP2').value.trim();
+  if (!p1||!p2) { alert('Preencha os dois nomes!'); return; }
+  d.p1=p1; d.p2=p2;
+  closeModal('modalGdEdit');
+  afterGdChange();
+}
+
+function gdRemoveDupla() {
+  const d = duplas.find(x=>x.id===gdEditId);
+  if (!confirm(`Remover "${d.p1} & ${d.p2}" do torneio?\n\n✅ Histórico preservado.\n❌ Partidas pendentes canceladas.`)) return;
+  d.inactive = true;
+  for (const key of [...pendingSet]) {
+    const [a,b]=key.split('-').map(Number);
+    if (a===d.id||b===d.id) pendingSet.delete(key);
+  }
+  queue = queue.filter(id=>id!==d.id);
+  closeModal('modalGdEdit');
+  if (currentMatch && (currentMatch.dA===d.id||currentMatch.dB===d.id)) {
+    stopMatchTimer(); currentMatch=null; enterMatchArea(); loadNextMatch();
+  }
+  afterGdChange();
+}
+
+function gdRestoreDupla() {
+  const d = duplas.find(x=>x.id===gdEditId);
+  if (!confirm(`Reativar "${d.p1} & ${d.p2}"?`)) return;
+  d.inactive = false;
+  if (fase===1) {
+    duplas.forEach(other => {
+      if (other.id===d.id||other.inactive) return;
+      const key = d.id<other.id?`${d.id}-${other.id}`:`${other.id}-${d.id}`;
+      const jaJogaram = histItems.some(h=>
+        (h.duplaAId===d.id&&h.duplaBId===other.id)||(h.duplaAId===other.id&&h.duplaBId===d.id));
+      if (!jaJogaram&&!pendingSet.has(key)) pendingSet.add(key);
+    });
+  }
+  wait[d.id]=0; queue.push(d.id);
+  closeModal('modalGdEdit');
+  afterGdChange();
+}
+
+function openGdAdd() {
+  document.getElementById('gdNewP1').value='';
+  document.getElementById('gdNewP2').value='';
+  renderGdFreeAgents();
+  document.getElementById('modalGdAdd').classList.add('show');
+}
+
+function renderGdFreeAgents() {
+  const active = new Set();
+  duplas.filter(d=>!d.inactive).forEach(d=>{active.add(d.p1.toLowerCase());active.add(d.p2.toLowerCase());});
+  const free = [...new Set(duplas.filter(d=>d.inactive)
+    .flatMap(d=>[d.p1,d.p2])
+    .filter(n=>!active.has(n.toLowerCase())))];
+  const box = document.getElementById('gdFreeAgents');
+  if (!free.length) { box.style.display='none'; return; }
+  box.style.display='block';
+  box.innerHTML=`
+    <div class="gd-fa-label">👤 Jogadores sem dupla:</div>
+    <div class="gd-fa-chips">${free.map(n=>`<button class="gd-fa-chip" onclick="gdFillPlayer('${n}')">${n}</button>`).join('')}</div>`;
+}
+
+function gdFillPlayer(name) {
+  const p1=document.getElementById('gdNewP1');
+  const p2=document.getElementById('gdNewP2');
+  if (!p1.value.trim()) p1.value=name; else if (!p2.value.trim()) p2.value=name;
+}
+
+function gdConfirmAdd() {
+  const p1=document.getElementById('gdNewP1').value.trim();
+  const p2=document.getElementById('gdNewP2').value.trim();
+  if (!p1||!p2) { alert('Preencha os dois nomes!'); return; }
+  const newId = duplas.length>0 ? Math.max(...duplas.map(d=>d.id))+1 : 0;
+  duplas.push({id:newId,p1,p2,j:0,v:0,d:0,saldo:0,pts:0,streak:0,inactive:false});
+  wait[newId]=0;
+  if (fase===1) {
+    duplas.forEach(other=>{
+      if (other.id===newId||other.inactive) return;
+      const key=newId<other.id?`${newId}-${other.id}`:`${other.id}-${newId}`;
+      pendingSet.add(key);
+    });
+    totalMatches=[...pendingSet].length+doneCount;
+  }
+  queue.push(newId);
+  numDuplas=duplas.filter(d=>!d.inactive).length;
+  closeModal('modalGdAdd');
+  afterGdChange();
+}
+
+function renderGdSwapGrid() {
+  const grid=document.getElementById('gdSwapGrid');
+  grid.innerHTML='';
+  duplas.filter(d=>!d.inactive).forEach(d=>{
+    const grp=document.createElement('div'); grp.className='gd-swap-grp';
+    grp.innerHTML=`<div class="gd-swap-grp-label">${d.p1} &amp; ${d.p2}</div>`;
+    ['p1','p2'].forEach(slot=>{
+      const name=d[slot];
+      const isA=swapSelA&&swapSelA.duplaId===d.id&&swapSelA.slot===slot;
+      const isB=swapSelB&&swapSelB.duplaId===d.id&&swapSelB.slot===slot;
+      const btn=document.createElement('button');
+      btn.className='gd-swap-player'+(isA?' sel-a':isB?' sel-b':'');
+      btn.textContent=(isA?'🟡 ':isB?'🔵 ':'')+name;
+      btn.onclick=()=>gdSelectSwap(d.id,slot,name);
+      grp.appendChild(btn);
+    });
+    grid.appendChild(grp);
+  });
+
+  document.getElementById('gdSlotA').textContent=swapSelA?`🟡 ${swapSelA.name}`:'— selecione —';
+  document.getElementById('gdSlotB').textContent=swapSelB?`🔵 ${swapSelB.name}`:'— selecione —';
+  document.getElementById('gdSlotABox').classList.toggle('filled',!!swapSelA);
+  document.getElementById('gdSlotBBox').classList.toggle('filled',!!swapSelB);
+
+  const preview=document.getElementById('gdSwapPreview');
+  const btnBox=document.getElementById('gdSwapBtns');
+  if (swapSelA&&swapSelB) {
+    preview.innerHTML=`
+      <div class="gd-swap-preview-row">
+        <span class="gd-sel-a">🟡 ${swapSelA.name}</span>
+        <span class="gd-swap-x">↔</span>
+        <span class="gd-sel-b">🔵 ${swapSelB.name}</span>
+      </div>
+      <div class="gd-swap-preview-sub">Escolha o que deseja fazer:</div>`;
+    preview.style.display='block'; btnBox.style.display='flex';
+  } else {
+    preview.style.display='none'; btnBox.style.display='none';
+  }
+}
+
+function gdSelectSwap(duplaId,slot,name) {
+  if (swapSelA&&swapSelA.duplaId===duplaId&&swapSelA.slot===slot) { swapSelA=null; }
+  else if (swapSelB&&swapSelB.duplaId===duplaId&&swapSelB.slot===slot) { swapSelB=null; }
+  else if (!swapSelA) { swapSelA={duplaId,slot,name}; }
+  else if (!swapSelB&&!(swapSelA.duplaId===duplaId&&swapSelA.slot===slot)) { swapSelB={duplaId,slot,name}; }
+  else { swapSelA={duplaId,slot,name}; swapSelB=null; }
+  renderGdSwapGrid();
+}
+
+function gdDoSwap() {
+  if (!swapSelA||!swapSelB) return;
+  const dA=duplas.find(x=>x.id===swapSelA.duplaId);
+  const dB=duplas.find(x=>x.id===swapSelB.duplaId);
+  if (!confirm(`Trocar "${swapSelA.name}" ↔ "${swapSelB.name}" entre as duplas existentes?`)) return;
+  const tmp=dA[swapSelA.slot]; dA[swapSelA.slot]=dB[swapSelB.slot]; dB[swapSelB.slot]=tmp;
+  swapSelA=null; swapSelB=null;
+  afterGdChange();
+}
+
+function gdFormNovaDupla() {
+  if (!swapSelA||!swapSelB) return;
+  const dA=duplas.find(x=>x.id===swapSelA.duplaId);
+  const dB=duplas.find(x=>x.id===swapSelB.duplaId);
+  if (dA.id===dB.id) { alert('Selecione jogadores de duplas diferentes!'); return; }
+  if (!confirm(`Formar nova dupla: "${swapSelA.name} & ${swapSelB.name}"?\n\n✅ Histórico de ambas duplas preservado.\n⏸ Duplas originais ficam inativas.`)) return;
+
+  [dA,dB].forEach(d=>{
+    d.inactive=true;
+    queue=queue.filter(q=>q!==d.id);
+    for (const key of [...pendingSet]) {
+      const [a,b]=key.split('-').map(Number);
+      if (a===d.id||b===d.id) pendingSet.delete(key);
+    }
+  });
+
+  if (currentMatch&&([dA.id,dB.id].includes(currentMatch.dA)||[dA.id,dB.id].includes(currentMatch.dB))) {
+    stopMatchTimer(); currentMatch=null;
+  }
+
+  const newId=Math.max(...duplas.map(d=>d.id))+1;
+  duplas.push({id:newId,p1:swapSelA.name,p2:swapSelB.name,j:0,v:0,d:0,saldo:0,pts:0,streak:0,inactive:false});
+  wait[newId]=0;
+  if (fase===1) {
+    duplas.forEach(other=>{
+      if (other.id===newId||other.inactive) return;
+      const key=newId<other.id?`${newId}-${other.id}`:`${other.id}-${newId}`;
+      pendingSet.add(key);
+    });
+  }
+  queue.push(newId);
+  numDuplas=duplas.filter(d=>!d.inactive).length;
+  swapSelA=null; swapSelB=null;
+  afterGdChange();
+  if (!currentMatch) { enterMatchArea(); loadNextMatch(); }
+}
+
+function afterGdChange() {
+  saveState();
+  renderGerenciarDuplas();
+  renderRanking();
+  renderFila();
+  renderHistorico();
+  if (currentMatch) {
+    const d1=duplas[currentMatch.dA], d2=duplas[currentMatch.dB];
+    if (d1) document.getElementById('mnA').innerHTML=`<div class="pname">${d1.p1}</div><div class="pname">${d1.p2}</div>`;
+    if (d2) document.getElementById('mnB').innerHTML=`<div class="pname">${d2.p1}</div><div class="pname">${d2.p2}</div>`;
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+//  CONFETTI
+// ══════════════════════════════════════════════════════════
+function launchConfetti() {
+  const cols=['#f1c40f','#74b9ff','#2ecc71','#e74c3c','#a29bfe','#fd79a8'];
+  for (let i=0;i<100;i++) {
+    const c=document.createElement('div'); c.className='cfp';
+    c.style.left=Math.random()*100+'vw';
+    c.style.background=cols[~~(Math.random()*cols.length)];
+    const s=5+Math.random()*9; c.style.width=s+'px'; c.style.height=s+'px';
+    c.style.animationDuration=(1.4+Math.random()*2)+'s';
+    c.style.animationDelay=(Math.random()*.8)+'s';
+    document.body.appendChild(c);
+    setTimeout(()=>c.remove(),4000);
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+//  NAVEGAÇÃO
+// ══════════════════════════════════════════════════════════
+function goTab(n) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+n).classList.add('active');
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab'+n).classList.add('active');
+  if (n===2) setRankView(rankView);
+  if (n===3) renderHistorico();
+  if (n===4) { swapSelA=null; swapSelB=null; renderGerenciarDuplas(); }
+}
+
+function closeModal(id='modalFinish') {
+  document.getElementById(id).classList.remove('show');
+}
+
+// ══════════════════════════════════════════════════════════
+//  RESTAURAR DO LOCALSTORAGE
+// ══════════════════════════════════════════════════════════
+function restoreUI() {
+  matchStarted = false;
+
+  document.getElementById('cfgDate').value      = eventDate  || '';
+  document.getElementById('cfgEventName').value = eventName  || '';
+  document.getElementById('stepDuplas').textContent = numDuplas;
+  stepDuplas(0);
+  document.querySelectorAll('.tog-btn').forEach(b=>b.classList.toggle('sel',+b.dataset.s===streakLimit));
+  stepDuplas(0); // atualiza info box e streakSection visibility
+  buildDuplasGrid();
+  duplas.forEach((d,i)=>{
+    const a=document.getElementById(`p1_${i}`); if(a) a.value=d.p1;
+    const b=document.getElementById(`p2_${i}`); if(b) b.value=d.p2;
+  });
+
+  document.getElementById('torneioTimer').textContent = fmtHMS(torneioElapsed);
+  startTorneioTimer();
+  renderHistorico();
+  renderRanking();
+  goTab(1);
+  renderEventBar();
+
+  if (fase===1 && pendingSet.size===0 && totalMatches>0) {
+    showFase1End();
+  } else if (fase===2 && fase2Index>=fase2Matches.length) {
+    showFase2Paused();
+  } else {
+    enterMatchArea();
+    loadNextMatch();
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+//  BOOT
+// ══════════════════════════════════════════════════════════
+document.getElementById('modalFinish').addEventListener('click', e=>{
+  if (e.target.id==='modalFinish') closeModal('modalFinish');
+});
+document.getElementById('modalPull').addEventListener('click', e=>{
+  if (e.target.id==='modalPull') closeModal('modalPull');
+});
+document.getElementById('modalGdEdit').addEventListener('click', e=>{
+  if (e.target.id==='modalGdEdit') closeModal('modalGdEdit');
+});
+document.getElementById('modalGdAdd').addEventListener('click', e=>{
+  if (e.target.id==='modalGdAdd') closeModal('modalGdAdd');
+});
+
+if (loadState()) {
+  restoreUI();
+  document.getElementById('resetSection').style.display = 'block';
+} else {
+  buildDuplasGrid();
+  document.getElementById('resetSection').style.display = 'none';
+  document.getElementById('cfgDate').value = new Date().toISOString().split('T')[0];
+}
