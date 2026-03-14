@@ -10,6 +10,67 @@
 const STORAGE_KEY = 'futevolei_v3';
 
 // ══════════════════════════════════════════════════════════
+//  SUPABASE — histórico persistente
+// ══════════════════════════════════════════════════════════
+const SB_URL = 'https://lcnjpkhclfknuqlqvfrt.supabase.co';
+const SB_KEY = 'sb_publishable_8alUHjoR19NRF8IS6AiwkA_7bJMaI64';
+
+async function sbFetch(path, options = {}) {
+  const res = await fetch(`${SB_URL}/rest/v1${path}`, {
+    ...options,
+    headers: {
+      'apikey':        SB_KEY,
+      'Authorization': `Bearer ${SB_KEY}`,
+      'Content-Type':  'application/json',
+      'Prefer':        'return=representation',
+      ...(options.headers || {}),
+    },
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Supabase ${res.status}: ${err}`);
+  }
+  return res.status === 204 ? null : res.json();
+}
+
+async function salvarTorneioSupabase() {
+  try {
+    const playerStats = buildPlayerStats();
+    const ranked = playerStats.sort((a,b) =>
+      b.pts!==a.pts ? b.pts-a.pts : b.saldo!==a.saldo ? b.saldo-a.saldo : b.v-a.v
+    );
+    const payload = {
+      evento_nome:  eventName  || null,
+      evento_data:  eventDate  || null,
+      duracao_ms:   torneioElapsed,
+      total_jogos:  doneCount,
+      ranking:      ranked,
+      partidas:     histItems,
+      duplas:       duplas,
+    };
+    await sbFetch('/torneios', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    console.log('✅ Torneio salvo no Supabase!');
+    return true;
+  } catch(e) {
+    console.warn('⚠️ Erro ao salvar no Supabase:', e.message);
+    return false;
+  }
+}
+
+async function buscarTorneiosSupabase() {
+  try {
+    const data = await sbFetch('/torneios?select=*&order=criado_em.desc&limit=50');
+    return data || [];
+  } catch(e) {
+    console.warn('⚠️ Erro ao buscar histórico:', e.message);
+    return [];
+  }
+}
+
+// ══════════════════════════════════════════════════════════
 //  TIMERS
 // ══════════════════════════════════════════════════════════
 let matchTimerInterval   = null;
@@ -766,6 +827,16 @@ function encerrarTorneio() {
   const totalTime = stopTorneioTimer();
   stopMatchTimer();
   clearState();
+
+  // Salvar no Supabase (assíncrono, não bloqueia a UI)
+  salvarTorneioSupabase().then(ok => {
+    const badge = document.getElementById('teSaveBadge');
+    if (badge) {
+      badge.textContent = ok ? '☁️ Salvo na nuvem' : '⚠️ Sem conexão — salvo só localmente';
+      badge.className   = ok ? 'te-save-badge ok' : 'te-save-badge warn';
+      badge.style.display = 'block';
+    }
+  });
 
   document.getElementById('matchArea').style.display    = 'none';
   document.getElementById('fase1End').style.display     = 'none';
@@ -1537,6 +1608,90 @@ function goTab(n) {
   if (n===2) setRankView(rankView);
   if (n===3) renderHistorico();
   if (n===4) { swapSelA=null; swapSelB=null; renderGerenciarDuplas(); }
+  if (n===5) renderTorneiosAnteriores();
+}
+
+// ══════════════════════════════════════════════════════════
+//  TELA 5 — TORNEIOS ANTERIORES (Supabase)
+// ══════════════════════════════════════════════════════════
+async function renderTorneiosAnteriores() {
+  const loading = document.getElementById('thLoading');
+  const empty   = document.getElementById('thEmpty');
+  const list    = document.getElementById('thList');
+  loading.style.display = 'block';
+  empty.style.display   = 'none';
+  list.style.display    = 'none';
+  list.innerHTML        = '';
+
+  const torneios = await buscarTorneiosSupabase();
+  loading.style.display = 'none';
+
+  if (!torneios.length) { empty.style.display = 'block'; return; }
+
+  list.style.display = 'flex';
+  const months = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+  torneios.forEach(t => {
+    const d    = new Date(t.criado_em);
+    const data = `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+    const hora = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    const ranking = (t.ranking || []).slice(0, 3);
+    const podioHTML = ranking.map((p, i) => {
+      const medals = ['🥇','🥈','🥉'];
+      return `<span class="th-medal">${medals[i]} ${p.name} <small>${p.pts}pts</small></span>`;
+    }).join('');
+
+    const card = document.createElement('div');
+    card.className = 'th-card';
+    card.innerHTML = `
+      <div class="th-card-top">
+        <div class="th-card-info">
+          <div class="th-card-nome">${t.evento_nome || 'Torneio de FuteVôlei'}</div>
+          <div class="th-card-data">📅 ${data} às ${hora}</div>
+        </div>
+        <div class="th-card-stats">
+          <span>🏐 ${t.total_jogos} jogos</span>
+          <span>⏱ ${fmtHMS(t.duracao_ms || 0)}</span>
+        </div>
+      </div>
+      <div class="th-podio">${podioHTML}</div>
+      <div class="th-card-hint">Toque para ver ranking completo</div>`;
+    card.addEventListener('click', () => toggleTorneioDetalhe(card, t));
+    list.appendChild(card);
+  });
+}
+
+function toggleTorneioDetalhe(card, t) {
+  const existing = card.querySelector('.th-detalhe');
+  if (existing) { existing.remove(); card.querySelector('.th-card-hint').style.display='block'; return; }
+  card.querySelector('.th-card-hint').style.display = 'none';
+
+  const detalhe = document.createElement('div');
+  detalhe.className = 'th-detalhe';
+  const ranking = t.ranking || [];
+  const rows = ranking.map((p, i) => {
+    const sc = p.saldo >= 0 ? 'sp' : 'sn';
+    return `<div class="rt-row rt-row-player">
+      <div class="rt-pos">${i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1}</div>
+      <div class="rt-name-player">
+        <div class="rtp-name">${p.name}</div>
+        <div class="rtp-duplas">${(p.duplas||[]).join(' · ')}</div>
+      </div>
+      <div class="rt-cell">${p.j}</div>
+      <div class="rt-cell v">${p.v}</div>
+      <div class="rt-cell">${p.d}</div>
+      <div class="rt-cell ${sc}">${p.saldo>0?'+':''}${p.saldo}</div>
+      <div class="rt-cell pts">${p.pts}</div>
+    </div>`;
+  }).join('');
+  detalhe.innerHTML = `
+    <div class="ranking-table" style="margin-top:10px;">
+      <div class="rt-head rt-row-player">
+        <span>#</span><span>Jogador</span>
+        <span>J</span><span>V</span><span>D</span><span>Saldo</span><span>Pts</span>
+      </div>${rows}
+    </div>`;
+  card.appendChild(detalhe);
 }
 
 function closeModal(id='modalFinish') {

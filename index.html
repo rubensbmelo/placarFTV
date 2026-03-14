@@ -22,6 +22,7 @@
     <button class="nav-tab"        id="tab2" onclick="goTab(2)">🏆 Ranking</button>
     <button class="nav-tab"        id="tab3" onclick="goTab(3)">📋 Histórico</button>
     <button class="nav-tab"        id="tab4" onclick="goTab(4)">👥 Duplas</button>
+    <button class="nav-tab"        id="tab5" onclick="goTab(5)">☁️ Torneios</button>
   </div>
 
   <!-- ════ TELA 0: SETUP ════ -->
@@ -274,6 +275,7 @@
         <div class="te-trophy">🏆</div>
         <h1 class="te-title">Torneio Encerrado!</h1>
         <div class="te-event-info" id="teEventInfo"></div>
+        <div class="te-save-badge" id="teSaveBadge" style="display:none"></div>
         <div class="te-stats-row">
           <div class="te-stat"><span id="teTotal">0</span><small>partidas</small></div>
           <div class="te-stat"><span id="teDuracao">00:00:00</span><small>duração</small></div>
@@ -430,6 +432,15 @@
     <!-- Grid de jogadores clicáveis -->
     <div class="gd-swap-grid" id="gdSwapGrid"></div>
 
+  </div>
+
+  <!-- ════ TELA 5: TORNEIOS ANTERIORES ════ -->
+  <div class="screen" id="screen-5">
+    <div class="section-title">☁️ Torneios Anteriores</div>
+    <div class="th-info">Histórico salvo na nuvem — acessível de qualquer celular.</div>
+    <div id="thLoading" class="th-loading">🔄 Carregando...</div>
+    <div id="thEmpty"   class="th-empty"   style="display:none">Nenhum torneio salvo ainda.</div>
+    <div id="thList"    class="th-list"    style="display:none"></div>
   </div>
 
 </div><!-- /app -->
