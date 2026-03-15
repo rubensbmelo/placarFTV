@@ -1174,11 +1174,11 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:
   padding: 0;
 }
 .logo-img {
-  width: clamp(80px, 20vw, 110px);
+  width: clamp(150px, 35vw, 190px);
   height: auto;
   display: block;
   margin: 0 auto;
-  filter: drop-shadow(0 0 12px rgba(243,156,18,.3));
+  filter: drop-shadow(0 0 14px rgba(243,156,18,.3));
 }
 .logo-sub {
   font-size: .62rem;
