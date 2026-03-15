@@ -1693,6 +1693,8 @@ function toggleTorneioDetalhe(card, t) {
 
   const detalhe = document.createElement('div');
   detalhe.className = 'th-detalhe';
+
+  // ── Ranking por jogador ──
   const ranking = t.ranking || [];
   const rows = ranking.map((p, i) => {
     const sc = p.saldo >= 0 ? 'sp' : 'sn';
@@ -1709,13 +1711,39 @@ function toggleTorneioDetalhe(card, t) {
       <div class="rt-cell pts">${p.pts}</div>
     </div>`;
   }).join('');
+
+  // ── Histórico de partidas ──
+  const partidas = (t.partidas || []).slice().reverse(); // ordem cronológica
+  const partidasHTML = partidas.map(h => {
+    const winA = h.sA > h.sB;
+    const dur  = h.duration ? fmtMS(h.duration) : '';
+    return `<div class="th-hist-item">
+      <div class="th-hist-num">#${h.num}<br><small>${h.fase||'F1'}</small></div>
+      <div class="th-hist-teams">
+        <span class="${winA?'th-winner':'th-loser'}">${h.p1a} & ${h.p2a}</span>
+        <span class="th-hist-x">×</span>
+        <span class="${!winA?'th-winner':'th-loser'}">${h.p1b} & ${h.p2b}</span>
+      </div>
+      <div class="th-hist-right">
+        <div class="th-hist-score">${h.sA} × ${h.sB}</div>
+        ${dur ? `<div class="th-hist-dur">⏱ ${dur}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+
   detalhe.innerHTML = `
-    <div class="ranking-table" style="margin-top:10px;">
+    <div class="th-detalhe-section-title">📊 Ranking</div>
+    <div class="ranking-table">
       <div class="rt-head rt-row-player">
         <span>#</span><span>Jogador</span>
         <span>J</span><span>V</span><span>D</span><span>Saldo</span><span>Pts</span>
       </div>${rows}
-    </div>`;
+    </div>
+    ${partidas.length > 0 ? `
+    <div class="th-detalhe-section-title" style="margin-top:14px;">📋 Partidas</div>
+    <div class="th-hist-list">${partidasHTML}</div>
+    ` : ''}`;
+
   card.appendChild(detalhe);
 }
 
