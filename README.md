@@ -1,6 +1,6 @@
-# 🏐 FuteVôlei — Sistema de Torneio
+# 🏐 FTVScore — Placar & Ranking de FuteVôlei
 
-App de placar e gerenciamento de torneios de futevôlei.  
+App para organizar partidas, rodízio e ranking de futevôlei.  
 Funciona direto no navegador, sem instalação.
 
 ## 🔗 Acesso
