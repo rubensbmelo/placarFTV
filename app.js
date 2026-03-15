@@ -157,6 +157,7 @@ function saveState() {
       queue, wait, currentMatch,
       histItems, doneCount,
       fase, fase2Matches, fase2Index,
+      forcedMatch,
       rodadaInicialDone, rodadaInicialPairs, rodadaInicialIdx,
       torneioElapsed,
     }));
@@ -184,6 +185,7 @@ function loadState() {
     fase          = s.fase         ?? 1;
     fase2Matches  = s.fase2Matches ?? [];
     fase2Index    = s.fase2Index   ?? 0;
+    forcedMatch   = s.forcedMatch  ?? null;
     rodadaInicialDone  = s.rodadaInicialDone  ?? false;
     rodadaInicialPairs = s.rodadaInicialPairs ?? [];
     rodadaInicialIdx   = s.rodadaInicialIdx   ?? 0;
@@ -488,6 +490,13 @@ function nAtivas() {
 }
 
 function findNextMatch() {
+  // ── Partida forçada pelo "Puxar Jogo" ──
+  if (forcedMatch) {
+    const m = forcedMatch;
+    forcedMatch = null;
+    return m;
+  }
+
   const n = nAtivas();
 
   // ── 6+ duplas: rodízio + round-robin ──
@@ -871,7 +880,7 @@ function encerrarTorneio() {
   document.getElementById('teDuracao').textContent = fmtHMS(totalTime);
   document.getElementById('teMedia').textContent   = avgMs > 0 ? fmtMS(avgMs) : '--:--';
 
-  // Pódio top 3
+  // Pódio top 3 — mostra dupla se o jogador não trocou de parceiro
   const podioData = [
     { id:'podio1', nameId:'podio1Name', ptsId:'podio1Pts' },
     { id:'podio2', nameId:'podio2Name', ptsId:'podio2Pts' },
@@ -880,8 +889,20 @@ function encerrarTorneio() {
   podioData.forEach((p, i) => {
     const player = sorted[i];
     if (player) {
-      document.getElementById(p.nameId).textContent = player.name;
-      document.getElementById(p.ptsId).textContent  =
+      // Verificar se jogou sempre com a mesma dupla
+      const duplasSemDuplicata = [...new Set(player.duplas)];
+      const sempreNaMesmaDupla = duplasSemDuplicata.length === 1;
+
+      if (sempreNaMesmaDupla) {
+        // Mostrar os dois jogadores da dupla
+        const nomeDupla = duplasSemDuplicata[0]; // "João & Rubens"
+        document.getElementById(p.nameId).innerHTML =
+          nomeDupla.replace(' & ', '<br><span style="font-size:.7em;opacity:.5">&</span><br>');
+      } else {
+        // Jogou com duplas diferentes — mostrar só o nome individual
+        document.getElementById(p.nameId).textContent = player.name;
+      }
+      document.getElementById(p.ptsId).textContent =
         `${player.pts}pts · ${player.v}V · saldo ${player.saldo>0?'+':''}${player.saldo}`;
       document.getElementById(p.id).style.display = 'flex';
     } else {
@@ -1085,9 +1106,13 @@ function openPullMatch() {
   document.getElementById('modalPull').classList.add('show');
 }
 
+let forcedMatch = null; // partida forçada pelo "Puxar Jogo"
+
 function pullMatch(dA, dB) {
   closeModal('modalPull');
-  queue = [dA, dB, ...queue.filter(id=>id!==dA&&id!==dB)];
+  forcedMatch = { dA, dB };
+  // Colocar as duplas na frente da fila também
+  queue = [dA, dB, ...queue.filter(id => id !== dA && id !== dB)];
   loadNextMatch();
 }
 

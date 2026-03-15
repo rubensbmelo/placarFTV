@@ -1092,3 +1092,6 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:
   margin-top: 4px;
 }
 .th-detalhe { margin-top: 4px; }
+
+/* Pódio — nome da dupla */
+.te-podio-name br + span { display: block; line-height: 1; margin: 2px 0; }
