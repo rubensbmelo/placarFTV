@@ -1130,7 +1130,7 @@ function renderFila() {
       const d = duplas[id];
       const chip = document.createElement('div');
       chip.className = 'fila-chip em-quadra';
-      chip.innerHTML = `<div class="fc-pos">🏐 em quadra</div><div class="fc-name">${d.p1}<br>${d.p2}</div>`;
+      chip.innerHTML = `<div class="fc-pos">⚽ em quadra</div><div class="fc-name">${d.p1}<br>${d.p2}</div>`;
       chips.appendChild(chip);
     });
     for (let i = rodadaInicialIdx + 1; i < rodadaInicialPairs.length; i++) {
@@ -1159,7 +1159,7 @@ function renderFila() {
     const onCourt = id === dA || id === dB;
     const chip = document.createElement('div');
     chip.className = 'fila-chip' + (onCourt ? ' em-quadra' : '');
-    const pos = onCourt ? '🏐 em quadra' : `${idx + 1}º na fila`;
+    const pos = onCourt ? '⚽ em quadra' : `${idx + 1}º na fila`;
     chip.innerHTML = `
       <div class="fc-pos">${pos}</div>
       <div class="fc-name">${d.p1}<br>${d.p2}</div>`;
@@ -1675,7 +1675,7 @@ async function renderTorneiosAnteriores() {
           <div class="th-card-data">📅 ${data} às ${hora}</div>
         </div>
         <div class="th-card-stats">
-          <span>🏐 ${t.total_jogos} jogos</span>
+          <span>⚽ ${t.total_jogos} jogos</span>
           <span>⏱ ${fmtHMS(t.duracao_ms || 0)}</span>
         </div>
       </div>
