@@ -538,10 +538,37 @@
 <div class="modal-bg" id="modalPull">
   <div class="modal" style="max-width:480px;max-height:88vh;overflow-y:auto;">
     <h3>⚡ Puxar Jogo</h3>
-    <div class="modal-sub">Escolha qual confronto jogar agora:</div>
+    <div class="modal-sub" id="modalPullSub">Escolha qual confronto jogar agora:</div>
     <div id="pullList"></div>
     <div class="modal-btns" style="margin-top:14px;">
       <button class="btn-cancel" style="width:100%" onclick="closeModal('modalPull')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: CRIAR JOGO MANUAL (Fila vazia) -->
+<div class="modal-bg" id="modalCreateMatch">
+  <div class="modal" style="max-width:500px;">
+    <h3>⚡ Criar Nova Partida</h3>
+    <div class="modal-sub">Selecione as duplas para o confronto:</div>
+
+    <div class="form-group" style="margin-bottom:12px;">
+      <label>Dupla A</label>
+      <select class="form-input" id="createDuplaA" style="font-size:.9rem;">
+        <option value="">Selecione...</option>
+      </select>
+    </div>
+
+    <div class="form-group" style="margin-bottom:18px;">
+      <label>Dupla B</label>
+      <select class="form-input" id="createDuplaB" style="font-size:.9rem;">
+        <option value="">Selecione...</option>
+      </select>
+    </div>
+
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal('modalCreateMatch')">Cancelar</button>
+      <button class="btn-ok" onclick="confirmCreateMatch()">Confirmar</button>
     </div>
   </div>
 </div>

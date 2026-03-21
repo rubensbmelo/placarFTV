@@ -1085,6 +1085,13 @@ function openPullMatch() {
   }
   allPairs.sort((x,y) => x.isSug!==y.isSug?(x.isSug?-1:1):y.maxWait-x.maxWait);
 
+  if (allPairs.length === 0) {
+    // Nenhuma partida pendente na fila — abrir modal de criação manual
+    populateCreateMatchSelects();
+    document.getElementById('modalCreateMatch').classList.add('show');
+    return;
+  }
+
   allPairs.forEach(({a,b,maxWait,isSug}) => {
     const d1=duplas[a], d2=duplas[b];
     const item=document.createElement('div');
@@ -1107,6 +1114,40 @@ function openPullMatch() {
 }
 
 let forcedMatch = null; // partida forçada pelo "Puxar Jogo"
+
+function populateCreateMatchSelects() {
+  const selA = document.getElementById('createDuplaA');
+  const selB = document.getElementById('createDuplaB');
+  selA.innerHTML = '<option value="">Selecione...</option>';
+  selB.innerHTML = '<option value="">Selecione...</option>';
+
+  duplas.filter(d => !d.inactive).forEach((d, idx) => {
+    const opt = document.createElement('option');
+    opt.value = d.id;
+    opt.textContent = `${idx+1}) ${d.p1} & ${d.p2}`;
+    selA.appendChild(opt);
+    selB.appendChild(opt.cloneNode(true));
+  });
+}
+
+function confirmCreateMatch() {
+  const idA = parseInt(document.getElementById('createDuplaA').value);
+  const idB = parseInt(document.getElementById('createDuplaB').value);
+
+  if (!idA || !idB) {
+    alert('Selecione as duas duplas!');
+    return;
+  }
+  if (idA === idB) {
+    alert('Duplas devem ser diferentes!');
+    return;
+  }
+
+  closeModal('modalCreateMatch');
+  forcedMatch = { dA: idA, dB: idB };
+  queue = [idA, idB, ...queue.filter(id => id !== idA && id !== idB)];
+  loadNextMatch();
+}
 
 function pullMatch(dA, dB) {
   closeModal('modalPull');
@@ -1794,6 +1835,9 @@ document.getElementById('modalFinish').addEventListener('click', e=>{
 });
 document.getElementById('modalPull').addEventListener('click', e=>{
   if (e.target.id==='modalPull') closeModal('modalPull');
+});
+document.getElementById('modalCreateMatch').addEventListener('click', e=>{
+  if (e.target.id==='modalCreateMatch') closeModal('modalCreateMatch');
 });
 document.getElementById('modalGdEdit').addEventListener('click', e=>{
   if (e.target.id==='modalGdEdit') closeModal('modalGdEdit');
