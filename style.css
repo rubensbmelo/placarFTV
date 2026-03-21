@@ -20,6 +20,9 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:
 .logo{text-align:center;margin-bottom:6px;padding:2px 0;}
 .logo p{font-size:.65rem;letter-spacing:2.5px;color:rgba(255,255,255,.25);text-transform:uppercase;}
 
+.app-header{background: transparent; padding: 10px 0; text-align: center; border: none; box-shadow: none;}
+.main-logo{display: block; margin: 0 auto; max-width: 140px; height: auto; background: transparent;}
+
 .nav{display:flex;gap:4px;margin-bottom:10px;background:rgba(0,0,0,.3);border-radius:14px;padding:4px;border:1px solid var(--border);}
 .nav-tab{flex:1;padding:9px 4px;border:none;border-radius:10px;font-family:'Barlow Condensed',sans-serif;font-size:.75rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:all .2s;background:transparent;color:rgba(255,255,255,.3);}
 .nav-tab.active{background:linear-gradient(135deg,rgba(243,156,18,.25),rgba(243,156,18,.1));color:var(--sun);border:1px solid rgba(243,156,18,.3);}
