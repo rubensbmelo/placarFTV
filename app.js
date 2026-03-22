@@ -489,6 +489,24 @@ function nAtivas() {
   return duplas.filter(d => !d.inactive).length;
 }
 
+// Leitura pura da próxima sugestão — não consome forcedMatch
+function peekNextMatch() {
+  if (forcedMatch) return forcedMatch;
+  const n = nAtivas();
+  if (n >= 6) {
+    if (!rodadaInicialDone && rodadaInicialIdx < rodadaInicialPairs.length)
+      return rodadaInicialPairs[rodadaInicialIdx];
+    const ativas = queue.filter(id => !duplas[id]?.inactive);
+    for (let i = 0; i < ativas.length; i++)
+      for (let j = i+1; j < ativas.length; j++)
+        if (pendingSet.has(pairKey(ativas[i], ativas[j])))
+          return { dA: ativas[i], dB: ativas[j] };
+    return null;
+  }
+  const ativas = queue.filter(id => !duplas[id]?.inactive);
+  return ativas.length >= 2 ? { dA: ativas[0], dB: ativas[1] } : null;
+}
+
 function findNextMatch() {
   // ── Partida forçada pelo "Puxar Jogo" ──
   if (forcedMatch) {
@@ -650,7 +668,8 @@ function setupMatch(dA, dB) {
     document.getElementById('progressPct').textContent  = pct + '%';
     document.getElementById('faseTag').textContent      = '🏁 FASE 1 — Todos contra Todos';
     document.getElementById('faseTag').className        = 'fase-tag fase1';
-    document.getElementById('pullBtn').style.display    = 'block';
+    document.getElementById('pullBtn').style.display        = 'block';
+    document.getElementById('escalacaoBtn').style.display   = 'block';
     document.getElementById('proximasCard').style.display = 'block';
     renderProximas();
   } else {
@@ -660,7 +679,8 @@ function setupMatch(dA, dB) {
     document.getElementById('progressPct').textContent  = pct + '%';
     document.getElementById('faseTag').textContent      = '⚡ FASE 2 — Partidas Livres';
     document.getElementById('faseTag').className        = 'fase-tag fase2';
-    document.getElementById('pullBtn').style.display    = 'none';
+    document.getElementById('pullBtn').style.display      = 'none';
+    document.getElementById('escalacaoBtn').style.display = 'none';
     renderProximasF2();
   }
 
@@ -1071,7 +1091,7 @@ function removeFase2Match(idx) {
 //  PUXAR JOGO — FASE 1
 // ══════════════════════════════════════════════════════════
 function openPullMatch() {
-  const suggested = findNextMatchF1();
+  const suggested = peekNextMatch();
   const list = document.getElementById('pullList');
   list.innerHTML = '';
 
@@ -1114,6 +1134,8 @@ function openPullMatch() {
 }
 
 let forcedMatch = null; // partida forçada pelo "Puxar Jogo"
+let escSelA = null;     // Escalação Livre — dupla A selecionada
+let escSelB = null;     // Escalação Livre — dupla B selecionada
 
 function populateCreateMatchSelects() {
   const selA = document.getElementById('createDuplaA');
@@ -1121,7 +1143,8 @@ function populateCreateMatchSelects() {
   selA.innerHTML = '<option value="">Selecione...</option>';
   selB.innerHTML = '<option value="">Selecione...</option>';
 
-  duplas.filter(d => !d.inactive).forEach((d, idx) => {
+  duplas.forEach((d, idx) => {
+    if (d.inactive) return;
     const opt = document.createElement('option');
     opt.value = d.id;
     opt.textContent = `${idx+1}) ${d.p1} & ${d.p2}`;
@@ -1131,15 +1154,32 @@ function populateCreateMatchSelects() {
 }
 
 function confirmCreateMatch() {
-  const idA = parseInt(document.getElementById('createDuplaA').value);
-  const idB = parseInt(document.getElementById('createDuplaB').value);
+  const valA = document.getElementById('createDuplaA').value;
+  const valB = document.getElementById('createDuplaB').value;
 
-  if (!idA || !idB) {
+  if (valA === '' || valB === '') {
     alert('Selecione as duas duplas!');
     return;
   }
+
+  const idA = parseInt(valA);
+  const idB = parseInt(valB);
+
   if (idA === idB) {
     alert('Duplas devem ser diferentes!');
+    return;
+  }
+
+  const dA = duplas[idA], dB = duplas[idB];
+  const playersA = [dA.p1.trim().toLowerCase(), dA.p2.trim().toLowerCase()];
+  const playersB = [dB.p1.trim().toLowerCase(), dB.p2.trim().toLowerCase()];
+  if (playersA.some(p => playersB.includes(p))) {
+    alert('Um mesmo jogador não pode estar nas duas duplas!');
+    return;
+  }
+
+  if (!checkMatchAvailability(idA, idB)) {
+    alert('Uma das duplas selecionadas já está em quadra!');
     return;
   }
 
@@ -1149,12 +1189,103 @@ function confirmCreateMatch() {
   loadNextMatch();
 }
 
+function checkMatchAvailability(idA, idB) {
+  if (!currentMatch || !matchStarted) return true;
+  return currentMatch.dA !== idA && currentMatch.dA !== idB &&
+         currentMatch.dB !== idA && currentMatch.dB !== idB;
+}
+
 function pullMatch(dA, dB) {
   closeModal('modalPull');
   forcedMatch = { dA, dB };
-  // Colocar as duplas na frente da fila também
   queue = [dA, dB, ...queue.filter(id => id !== dA && id !== dB)];
-  loadNextMatch();
+  if (!matchStarted) {
+    // Partida ainda não iniciada — trocar imediatamente no placar
+    loadNextMatch();
+  } else {
+    // Partida em andamento — destacar como próximo jogo no painel
+    renderProximas();
+    renderFila();
+    saveState();
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+//  ESCALAÇÃO LIVRE
+// ══════════════════════════════════════════════════════════
+function openEscalacao() {
+  escSelA = null;
+  escSelB = null;
+  const grid = document.getElementById('escGrid');
+  grid.innerHTML = '';
+  duplas.forEach((d, idx) => {
+    if (d.inactive) return;
+    const card = document.createElement('div');
+    card.className = 'esc-card';
+    card.dataset.id = d.id;
+    card.innerHTML = `
+      <div class="esc-card-badge"></div>
+      <div class="esc-card-num">Dupla ${idx + 1}</div>
+      <div class="esc-card-names">${d.p1}<br>${d.p2}</div>`;
+    card.onclick = () => escalacaoCardClick(d.id);
+    grid.appendChild(card);
+  });
+  document.getElementById('escSub').textContent = 'Toque na 1ª dupla — ela será a Dupla A';
+  document.getElementById('modalEscalacao').classList.add('show');
+}
+
+function escalacaoCardClick(id) {
+  if (escSelA === null) {
+    escSelA = id;
+    updateEscalacaoCards();
+    document.getElementById('escSub').textContent = 'Agora toque na 2ª dupla — ela será a Dupla B';
+    return;
+  }
+  if (escSelA === id) {
+    // Deselect A
+    escSelA = null;
+    updateEscalacaoCards();
+    document.getElementById('escSub').textContent = 'Toque na 1ª dupla — ela será a Dupla A';
+    return;
+  }
+  // Second selection: validate and confirm
+  const dA = duplas[escSelA], dB = duplas[id];
+  const playersA = [dA.p1.trim().toLowerCase(), dA.p2.trim().toLowerCase()];
+  const playersB = [dB.p1.trim().toLowerCase(), dB.p2.trim().toLowerCase()];
+  if (playersA.some(p => playersB.includes(p))) {
+    alert('Um mesmo jogador não pode estar nas duas duplas!');
+    return;
+  }
+  escSelB = id;
+  updateEscalacaoCards();
+  setTimeout(confirmEscalacao, 220);
+}
+
+function updateEscalacaoCards() {
+  document.querySelectorAll('.esc-card').forEach(card => {
+    const cid = parseInt(card.dataset.id);
+    card.classList.remove('sel-a', 'sel-b');
+    const badge = card.querySelector('.esc-card-badge');
+    badge.textContent = '';
+    if (cid === escSelA) { card.classList.add('sel-a'); badge.textContent = 'A'; }
+    if (cid === escSelB) { card.classList.add('sel-b'); badge.textContent = 'B'; }
+  });
+}
+
+function confirmEscalacao() {
+  if (escSelA === null || escSelB === null) return;
+  const idA = escSelA, idB = escSelB;
+  escSelA = null; escSelB = null;
+  closeModal('modalEscalacao');
+  forcedMatch = { dA: idA, dB: idB };
+  queue = [idA, idB, ...queue.filter(id => id !== idA && id !== idB)];
+  if (!matchStarted) {
+    loadNextMatch();
+  } else {
+    renderProximas();
+    renderFila();
+    saveState();
+  }
 }
 
 // ══════════════════════════════════════════════════════════
@@ -1214,14 +1345,18 @@ function renderProximas() {
   list.innerHTML = '';
   previews.forEach((m,i) => {
     const d1=duplas[m.dA], d2=duplas[m.dB];
-    const item=document.createElement('div'); item.className='prox-item';
+    const isForced = i === 0 && forcedMatch &&
+      ((forcedMatch.dA===m.dA && forcedMatch.dB===m.dB) ||
+       (forcedMatch.dA===m.dB && forcedMatch.dB===m.dA));
+    const item=document.createElement('div');
+    item.className='prox-item' + (isForced ? ' prox-item--next' : '');
     item.innerHTML=`
-      <div class="prox-num">${doneCount+2+i}</div>
+      <div class="prox-num">${isForced ? '▶' : doneCount+2+i}</div>
       <div class="prox-teams">
         <span class="pa">${d1.p1} & ${d1.p2}</span>
         <span class="px">×</span>
         <span class="pb">${d2.p1} & ${d2.p2}</span>
-      </div>`;
+      </div>${isForced ? '<span class="prox-badge-next">PRÓXIMO</span>' : ''}`;
     list.appendChild(item);
   });
   document.getElementById('proximasCard').style.display = previews.length ? 'block' : 'none';
@@ -1844,6 +1979,9 @@ document.getElementById('modalGdEdit').addEventListener('click', e=>{
 });
 document.getElementById('modalGdAdd').addEventListener('click', e=>{
   if (e.target.id==='modalGdAdd') closeModal('modalGdAdd');
+});
+document.getElementById('modalEscalacao').addEventListener('click', e=>{
+  if (e.target.id==='modalEscalacao') closeModal('modalEscalacao');
 });
 
 if (loadState()) {

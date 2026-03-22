@@ -178,6 +178,7 @@
 
       <div class="hint">Toque no número ou +1 para pontuar</div>
       <button class="pull-btn" id="pullBtn" onclick="openPullMatch()">⚡ Puxar outro jogo agora</button>
+      <button class="escalacao-btn" id="escalacaoBtn" onclick="openEscalacao()">📋 Escalação Livre</button>
 
       <div class="proximas-card" id="proximasCard">
         <div class="prox-title">⏭ Próximas partidas previstas</div>
@@ -569,6 +570,22 @@
     <div class="modal-btns">
       <button class="btn-cancel" onclick="closeModal('modalCreateMatch')">Cancelar</button>
       <button class="btn-ok" onclick="confirmCreateMatch()">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: ESCALAÇÃO LIVRE -->
+<div class="modal-bg" id="modalEscalacao">
+  <div class="modal" style="max-width:480px;max-height:90vh;overflow-y:auto;">
+    <h3>📋 Escalação Livre</h3>
+    <div class="modal-sub" id="escSub">Toque na 1ª dupla — ela será a Dupla A</div>
+    <div class="esc-legend">
+      <span class="esc-leg-a">■ Dupla A</span>
+      <span class="esc-leg-b">■ Dupla B</span>
+    </div>
+    <div class="esc-grid" id="escGrid"></div>
+    <div class="modal-btns" style="margin-top:16px;">
+      <button class="btn-cancel" style="width:100%" onclick="closeModal('modalEscalacao')">Cancelar</button>
     </div>
   </div>
 </div>
