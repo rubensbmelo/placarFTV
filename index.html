@@ -65,6 +65,16 @@
         </div>
       </div>
       <div style="border-top:1px solid var(--border);padding-top:16px;">
+        <div class="config-row">
+          <div class="config-label">↔ Trocar de lado a cada 5 pontos?</div>
+          <div class="tog-group">
+            <button class="tog-btn" id="trocaLadoSim" onclick="setTrocaLado(true)">Sim</button>
+            <button class="tog-btn sel" id="trocaLadoNao" onclick="setTrocaLado(false)">Não</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="border-top:1px solid var(--border);padding-top:16px;">
         <div class="info-box" id="infoBox">
           ⚽ <strong id="infoN">6 duplas</strong> →
           <span id="infoDesc">rodada inicial: <strong id="infoRodadaPairs">3 jogos</strong> em sequência (D1×D2, D3×D4, D5×D6). Depois: <strong>ganhou ou perdeu, sai da quadra</strong> — sempre entram as 2 próximas da fila. Espera máx.: <strong id="infoWait">~3 jogos</strong>.</span>
@@ -179,6 +189,7 @@
       <div class="hint">Toque no número ou +1 para pontuar</div>
       <button class="pull-btn" id="pullBtn" onclick="openPullMatch()">⚡ Puxar outro jogo agora</button>
       <button class="escalacao-btn" id="escalacaoBtn" onclick="openEscalacao()">📋 Escalação Livre</button>
+      <button class="end-torneio-btn" id="endTorneioBtn" onclick="confirmarEncerrarTorneio()">🏆 Terminar Campeonato</button>
 
       <div class="proximas-card" id="proximasCard">
         <div class="prox-title">⏭ Próximas partidas previstas</div>
@@ -512,6 +523,18 @@
   </div>
 </div>
 
+<!-- MODAL: TROCAR DE LADO -->
+<div class="modal-bg" id="modalTrocaLado">
+  <div class="modal">
+    <h3>↔ Trocar de Lado?</h3>
+    <div class="modal-sub" id="trocaLadoPlacar"></div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="recusarTrocaLado()">Não, continuar</button>
+      <button class="btn-ok"     onclick="confirmarTrocaLado()">Sim, trocar!</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: RESULTADO -->
 <div class="modal-bg" id="modalFinish">
   <div class="modal">
@@ -644,6 +667,20 @@
     </div>
 
   </div>
+
+  <!-- Prompt interno: trocar de lado (visível dentro do fullscreen) -->
+  <div class="fs-swap-prompt" id="fsSwapPrompt">
+    <div class="fs-swap-box">
+      <div class="fs-swap-icon">↔</div>
+      <div class="fs-swap-title">Trocar de Lado?</div>
+      <div class="fs-swap-sub" id="fsSwapSub"></div>
+      <div class="fs-swap-btns">
+        <button class="fs-swap-btn fs-swap-no"  onclick="recusarTrocaLado()">Não</button>
+        <button class="fs-swap-btn fs-swap-yes" onclick="confirmarTrocaLado()">Sim, trocar!</button>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <script src="app.js"></script>
