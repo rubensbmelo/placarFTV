@@ -185,6 +185,8 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:
 .modal{background:linear-gradient(160deg,#0f2940,#0b2035);border:1px solid rgba(255,255,255,.12);border-radius:22px;padding:24px;width:100%;max-width:400px;box-shadow:0 24px 60px rgba(0,0,0,.6);animation:mi .18s ease;}
 @keyframes mi{from{transform:scale(.94);opacity:0}to{transform:scale(1);opacity:1}}
 .modal h3{font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:3px;color:var(--sun);margin-bottom:4px;}
+.modal-close-btn{position:absolute;top:14px;right:14px;background:none;border:none;color:rgba(255,255,255,.4);font-size:1rem;cursor:pointer;line-height:1;padding:4px 6px;border-radius:6px;transition:color .15s,background .15s;}
+.modal-close-btn:hover{color:#fff;background:rgba(255,255,255,.1);}
 .modal-sub{font-size:.78rem;letter-spacing:1.5px;color:var(--muted);margin-bottom:18px;text-transform:uppercase;}
 
 /* Form controls inside modal */
