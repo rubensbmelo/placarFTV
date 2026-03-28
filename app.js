@@ -783,6 +783,7 @@ function confirmFinish() {
     p1a: duplas[dA].p1, p2a: duplas[dA].p2,
     p1b: duplas[dB].p1, p2b: duplas[dB].p2,
     sA, sB, winnerId: winner, duration: dur,
+    arena: eventName || '',
   });
   renderHistorico();
 
@@ -1475,6 +1476,7 @@ function renderHistorico() {
         <div class="hist-fase">${h.fase||'F1'}</div>
       </div>
       <div class="hist-teams">
+        ${h.arena ? `<div class="hist-arena">🏟️ ${h.arena}</div>` : ''}
         <span class="ha" style="${winA?'':'opacity:.45'}">${h.p1a} & ${h.p2a}</span>
         <span class="hx">×</span>
         <span class="hb" style="${!winA?'':'opacity:.45'}">${h.p1b} & ${h.p2b}</span>
@@ -2021,3 +2023,76 @@ if (loadState()) {
   document.getElementById('resetSection').style.display = 'none';
   document.getElementById('cfgDate').value = new Date().toISOString().split('T')[0];
 }
+
+// ══════════════════════════════════════════════════════════
+//  ARENA PICKER
+// ══════════════════════════════════════════════════════════
+const ARENAS_KEY = 'ftv_arenas';
+
+const ARENAS_DEFAULT = [
+  { name: 'Futshow Arena',            city: 'Candeias' },
+  { name: 'Arena Prime Futevôlei',    city: 'Piedade, Jaboatão dos Guararapes' },
+];
+
+function loadCustomArenas() {
+  try { return JSON.parse(localStorage.getItem(ARENAS_KEY)) || []; }
+  catch { return []; }
+}
+
+function saveCustomArenas(list) {
+  localStorage.setItem(ARENAS_KEY, JSON.stringify(list));
+}
+
+function renderArenaDropList() {
+  const listEl  = document.getElementById('arenaDropList');
+  const custom  = loadCustomArenas();
+  const all     = [...ARENAS_DEFAULT, ...custom];
+  listEl.innerHTML = '';
+  all.forEach(a => {
+    const btn = document.createElement('button');
+    btn.className = 'arena-drop-item';
+    btn.innerHTML = `${a.name}<span class="arena-city">${a.city}</span>`;
+    btn.onclick = () => selectArena(a.name);
+    listEl.appendChild(btn);
+  });
+}
+
+function toggleArenaDropdown(e) {
+  e.stopPropagation();
+  const drop = document.getElementById('arenaDropdown');
+  const isOpen = drop.classList.contains('open');
+  if (!isOpen) renderArenaDropList();
+  drop.classList.toggle('open', !isOpen);
+}
+
+function selectArena(name) {
+  document.getElementById('cfgEventName').value = name;
+  document.getElementById('arenaDropdown').classList.remove('open');
+}
+
+function openSuggestArena() {
+  document.getElementById('arenaDropdown').classList.remove('open');
+  document.getElementById('suggestArenaName').value = '';
+  document.getElementById('suggestArenaCity').value = '';
+  document.getElementById('modalSuggestArena').style.display = 'flex';
+}
+
+function saveSuggestArena() {
+  const name = document.getElementById('suggestArenaName').value.trim();
+  const city = document.getElementById('suggestArenaCity').value.trim();
+  if (!name) { document.getElementById('suggestArenaName').focus(); return; }
+  const list = loadCustomArenas();
+  list.push({ name, city: city || '' });
+  saveCustomArenas(list);
+  closeModal('modalSuggestArena');
+  renderArenaDropList();
+  selectArena(name);
+}
+
+// Fecha dropdown ao clicar fora
+document.addEventListener('click', () => {
+  document.getElementById('arenaDropdown').classList.remove('open');
+});
+document.getElementById('modalSuggestArena').addEventListener('click', e => {
+  if (e.target.id === 'modalSuggestArena') closeModal('modalSuggestArena');
+});

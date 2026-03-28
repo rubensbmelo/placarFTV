@@ -41,7 +41,15 @@
         <div class="config-label">📅 Data & Nome do Evento</div>
         <div class="event-fields">
           <input class="form-input" type="date" id="cfgDate">
-          <input class="form-input" type="text" id="cfgEventName" placeholder="Ex: Pelada da Praia · Boa Viagem" maxlength="40">
+          <div class="arena-field-wrap">
+            <input class="form-input" type="text" id="cfgEventName" placeholder="Ex: Pelada da Praia · Boa Viagem" maxlength="40">
+            <button class="arena-pick-btn" onclick="toggleArenaDropdown(event)" title="Selecionar arena">🏟️</button>
+            <div class="arena-dropdown" id="arenaDropdown">
+              <div class="arena-drop-list" id="arenaDropList"></div>
+              <div class="arena-drop-divider"></div>
+              <button class="arena-drop-suggest" onclick="openSuggestArena()">➕ Sugerir arena</button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -681,6 +689,26 @@
     </div>
   </div>
 
+</div>
+
+<!-- MODAL: SUGERIR ARENA -->
+<div class="modal-bg" id="modalSuggestArena">
+  <div class="modal" style="max-width:380px;">
+    <h3>🏟️ Sugerir Arena</h3>
+    <div class="modal-sub">Salva no seu dispositivo para uso futuro</div>
+    <div class="form-group" style="margin-bottom:10px;">
+      <label>Nome da Arena</label>
+      <input class="form-input" id="suggestArenaName" placeholder="Ex: Arena do Sol" maxlength="40">
+    </div>
+    <div class="form-group" style="margin-bottom:16px;">
+      <label>Cidade / Bairro</label>
+      <input class="form-input" id="suggestArenaCity" placeholder="Ex: Boa Viagem, Recife" maxlength="40">
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal('modalSuggestArena')">Cancelar</button>
+      <button class="btn-ok" onclick="saveSuggestArena()">Salvar</button>
+    </div>
+  </div>
 </div>
 
 <script src="app.js"></script>
