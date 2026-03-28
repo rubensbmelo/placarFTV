@@ -2139,3 +2139,7 @@ document.addEventListener('click', () => {
 document.getElementById('modalSuggestArena').addEventListener('click', e => {
   if (e.target.id === 'modalSuggestArena') cancelSuggestArena();
 });
+document.getElementById('btnSuggestArenaClose').addEventListener('click', e => {
+  e.stopPropagation();
+  cancelSuggestArena();
+});
