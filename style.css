@@ -630,7 +630,52 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:
 }
 .arena-dropdown.open { display: block; }
 
+.arena-drop-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 14px 7px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+.arena-drop-title {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.35);
+}
+.arena-drop-close {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,.4);
+  font-size: .95rem;
+  cursor: pointer;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: color .15s, background .15s;
+}
+.arena-drop-close:hover { color: #fff; background: rgba(255,255,255,.1); }
+
 .arena-drop-list { display: flex; flex-direction: column; }
+.arena-drop-row { display: flex; align-items: center; }
+.arena-drop-row .arena-drop-item { flex: 1; }
+.arena-drop-delete {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: rgba(255,255,255,.3);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 12px 0 4px;
+  transition: color .15s;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+}
+.arena-drop-delete:hover { color: #e74c3c; }
 .arena-drop-item {
   padding: 11px 14px;
   font-family: 'Barlow Condensed', sans-serif;

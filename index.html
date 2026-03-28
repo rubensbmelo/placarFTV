@@ -45,6 +45,10 @@
             <input class="form-input" type="text" id="cfgEventName" placeholder="Ex: Pelada da Praia · Boa Viagem" maxlength="40">
             <button class="arena-pick-btn" onclick="toggleArenaDropdown(event)" title="Selecionar arena">🏟️</button>
             <div class="arena-dropdown" id="arenaDropdown">
+              <div class="arena-drop-header">
+                <span class="arena-drop-title">Selecionar arena</span>
+                <button class="arena-drop-close" onclick="closeArenaDropdown(event)" title="Fechar">✕</button>
+              </div>
               <div class="arena-drop-list" id="arenaDropList"></div>
               <div class="arena-drop-divider"></div>
               <button class="arena-drop-suggest" onclick="openSuggestArena()">➕ Sugerir arena</button>

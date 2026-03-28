@@ -2044,17 +2044,46 @@ function saveCustomArenas(list) {
 }
 
 function renderArenaDropList() {
-  const listEl  = document.getElementById('arenaDropList');
-  const custom  = loadCustomArenas();
-  const all     = [...ARENAS_DEFAULT, ...custom];
+  const listEl = document.getElementById('arenaDropList');
+  const custom = loadCustomArenas();
   listEl.innerHTML = '';
-  all.forEach(a => {
+
+  // Arenas fixas — sem botão de deletar
+  ARENAS_DEFAULT.forEach(a => {
+    const row = document.createElement('div');
+    row.className = 'arena-drop-row';
     const btn = document.createElement('button');
     btn.className = 'arena-drop-item';
     btn.innerHTML = `${a.name}<span class="arena-city">${a.city}</span>`;
     btn.onclick = () => selectArena(a.name);
-    listEl.appendChild(btn);
+    row.appendChild(btn);
+    listEl.appendChild(row);
   });
+
+  // Arenas customizadas — com botão de deletar
+  custom.forEach((a, idx) => {
+    const row = document.createElement('div');
+    row.className = 'arena-drop-row';
+    const btn = document.createElement('button');
+    btn.className = 'arena-drop-item';
+    btn.innerHTML = `${a.name}<span class="arena-city">${a.city}</span>`;
+    btn.onclick = () => selectArena(a.name);
+    const del = document.createElement('button');
+    del.className = 'arena-drop-delete';
+    del.title = 'Remover arena';
+    del.textContent = '×';
+    del.onclick = (e) => { e.stopPropagation(); deleteCustomArena(idx); };
+    row.appendChild(btn);
+    row.appendChild(del);
+    listEl.appendChild(row);
+  });
+}
+
+function deleteCustomArena(idx) {
+  const list = loadCustomArenas();
+  list.splice(idx, 1);
+  saveCustomArenas(list);
+  renderArenaDropList();
 }
 
 function toggleArenaDropdown(e) {
@@ -2063,6 +2092,11 @@ function toggleArenaDropdown(e) {
   const isOpen = drop.classList.contains('open');
   if (!isOpen) renderArenaDropList();
   drop.classList.toggle('open', !isOpen);
+}
+
+function closeArenaDropdown(e) {
+  e.stopPropagation();
+  document.getElementById('arenaDropdown').classList.remove('open');
 }
 
 function selectArena(name) {
