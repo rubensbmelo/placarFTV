@@ -39,6 +39,8 @@ async function salvarTorneioSupabase() {
     const ranked = playerStats.sort((a,b) =>
       b.pts!==a.pts ? b.pts-a.pts : b.saldo!==a.saldo ? b.saldo-a.saldo : b.v-a.v
     );
+    const rankedPositions = calcPositions(ranked);
+    ranked.forEach((p, i) => { p.pos = rankedPositions[i]; });
     const payload = {
       evento_nome:  eventName  || null,
       evento_data:  eventDate  || null,
@@ -1400,6 +1402,188 @@ function renderRanking() {
   if (rankView === 'player') renderPlayerRanking();
 }
 
+// ══════════════════════════════════════════════════════════
+//  CARD INSTAGRAM — Canvas 1200×675
+// ══════════════════════════════════════════════════════════
+function gerarCardInstagram(opts = {}) {
+  const duplasArr = opts.duplas != null ? opts.duplas : duplas;
+  const rawDate   = opts.date || opts.criado_em || eventDate || '';
+  const arenaStr  = (opts.arena != null ? opts.arena : eventName) || '';
+
+  const W = 1200, H = 675;
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  // Format date
+  let displayDate = '';
+  if (rawDate) {
+    const d = new Date(rawDate);
+    if (!isNaN(d)) {
+      const months = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+      displayDate = `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+    } else {
+      displayDate = rawDate;
+    }
+  }
+
+  // Sort and compute dense ranking
+  const sorted = [...duplasArr].sort((a, b) =>
+    b.pts !== a.pts ? b.pts - a.pts : b.saldo !== a.saldo ? b.saldo - a.saldo : b.v - a.v
+  );
+  const positions = calcPositions(sorted);
+
+  function draw(logoImg) {
+    // Background
+    ctx.fillStyle = '#0d1b2a';
+    ctx.fillRect(0, 0, W, H);
+
+    // Watermark
+    ctx.save();
+    ctx.globalAlpha = 0.05;
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 340px "Bebas Neue", Impact, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('FTV', W / 2, H / 2);
+    ctx.restore();
+
+    // Logo
+    if (logoImg) {
+      const lh = 90;
+      const lw = logoImg.width * (lh / logoImg.height);
+      ctx.drawImage(logoImg, 40, 15, lw, lh);
+    }
+
+    // Title
+    ctx.fillStyle = '#D4AF37';
+    ctx.font = 'bold 52px "Bebas Neue", Impact, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🏆 CLASSIFICAÇÃO', W / 2, 60);
+
+    // Date & Arena (right)
+    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+    ctx.font = '600 20px "Barlow Condensed", Arial, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    if (displayDate) ctx.fillText(displayDate, W - 40, 44);
+    if (arenaStr)    ctx.fillText(arenaStr, W - 40, 72);
+
+    // Header divider
+    ctx.strokeStyle = 'rgba(212,175,55,0.35)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(40, 115); ctx.lineTo(W - 40, 115); ctx.stroke();
+
+    // Column x positions
+    const COL_POS   = 70;
+    const COL_NAME  = 115;
+    const COL_J     = 735;
+    const COL_V     = 815;
+    const COL_D     = 895;
+    const COL_SALDO = 985;
+    const COL_PTS   = 1085;
+
+    // Table header
+    const TH_Y = 118, TH_H = 30;
+    ctx.fillStyle = 'rgba(255,255,255,0.05)';
+    ctx.fillRect(40, TH_Y, W - 80, TH_H);
+
+    const thMid = TH_Y + TH_H / 2;
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.font = '700 13px "Barlow Condensed", Arial, sans-serif';
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'center'; ctx.fillText('#',      COL_POS,   thMid);
+    ctx.textAlign = 'left';   ctx.fillText('DUPLA',  COL_NAME,  thMid);
+    ctx.textAlign = 'center'; ctx.fillText('J',      COL_J,     thMid);
+                              ctx.fillText('V',      COL_V,     thMid);
+                              ctx.fillText('D',      COL_D,     thMid);
+                              ctx.fillText('SALDO',  COL_SALDO, thMid);
+    ctx.fillStyle = 'rgba(212,175,55,0.7)';
+                              ctx.fillText('PTS',    COL_PTS,   thMid);
+
+    // Rows
+    const ROW_Y0 = TH_Y + TH_H;
+    const ROW_H  = 50;
+
+    sorted.forEach((d, i) => {
+      const ry = ROW_Y0 + i * ROW_H;
+      if (ry + ROW_H > H - 28) return;
+      const midY = ry + ROW_H / 2;
+      const pos  = positions[i];
+
+      if (i % 2 === 0) {
+        ctx.fillStyle = 'rgba(255,255,255,0.025)';
+        ctx.fillRect(40, ry, W - 80, ROW_H);
+      }
+
+      // Position / medal
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      if (pos <= 3) {
+        ctx.font = '26px serif';
+        ctx.fillText(pos === 1 ? '🥇' : pos === 2 ? '🥈' : '🥉', COL_POS, midY);
+      } else {
+        ctx.fillStyle = 'rgba(255,255,255,0.45)';
+        ctx.font = 'bold 20px "Bebas Neue", Impact, sans-serif';
+        ctx.fillText(pos, COL_POS, midY);
+      }
+
+      // Dupla name
+      const nameStr = `${d.p1} / ${d.p2}`;
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 21px "Bebas Neue", Impact, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(nameStr.length > 36 ? nameStr.slice(0, 34) + '…' : nameStr, COL_NAME, midY);
+
+      // J
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      ctx.font = 'bold 20px "Bebas Neue", Impact, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(d.j, COL_J, midY);
+
+      // V (green)
+      ctx.fillStyle = '#2ecc71';
+      ctx.fillText(d.v, COL_V, midY);
+
+      // D
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      ctx.fillText(d.d, COL_D, midY);
+
+      // Saldo
+      ctx.fillStyle = d.saldo >= 0 ? '#2ecc71' : '#e74c3c';
+      ctx.fillText(d.saldo > 0 ? `+${d.saldo}` : String(d.saldo), COL_SALDO, midY);
+
+      // Pts
+      ctx.fillStyle = '#D4AF37';
+      ctx.font = 'bold 22px "Bebas Neue", Impact, sans-serif';
+      ctx.fillText(d.pts, COL_PTS, midY);
+
+      // Row divider
+      ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(40, ry + ROW_H); ctx.lineTo(W - 40, ry + ROW_H); ctx.stroke();
+    });
+
+    // Footer
+    ctx.fillStyle = 'rgba(255,255,255,0.18)';
+    ctx.font = '16px "Barlow Condensed", Arial, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('ftvscore.app', W / 2, H - 18);
+
+    // Download
+    const fileDate = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const link = document.createElement('a');
+    link.download = `ftvscore-ranking-${fileDate}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  }
+
+  const img = new Image();
+  img.onload  = () => draw(img);
+  img.onerror = () => draw(null);
+  img.src = 'assets/logo.png';
+}
+
 function calcPositions(sorted) {
   const pos = [];
   let rank = 1;
@@ -1900,9 +2084,11 @@ function toggleTorneioDetalhe(card, t) {
 
   const ranking = t.ranking || [];
   const rows = ranking.map((p, i) => {
-    const sc = p.saldo >= 0 ? 'sp' : 'sn';
+    const sc  = p.saldo >= 0 ? 'sp' : 'sn';
+    const pos = p.pos != null ? p.pos : i + 1;
+    const medal = pos===1?'🥇':pos===2?'🥈':pos===3?'🥉':pos;
     return `<div class="rt-row rt-row-player">
-      <div class="rt-pos">${i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1}</div>
+      <div class="rt-pos">${medal}</div>
       <div class="rt-name-player">
         <div class="rtp-name">${p.name}</div>
         <div class="rtp-duplas">${(p.duplas||[]).join(' · ')}</div>
@@ -1945,6 +2131,16 @@ function toggleTorneioDetalhe(card, t) {
     <div class="th-detalhe-section-title" style="margin-top:14px;">📋 Partidas</div>
     <div class="th-hist-list">${partidasHTML}</div>
     ` : ''}`;
+
+  // Botão card Instagram
+  const instaBtn = document.createElement('button');
+  instaBtn.className = 'th-insta-btn';
+  instaBtn.textContent = '📸 Card Instagram';
+  instaBtn.onclick = (e) => {
+    e.stopPropagation();
+    gerarCardInstagram({ duplas: t.duplas, date: t.evento_data || t.criado_em, arena: t.evento_nome, criado_em: t.criado_em });
+  };
+  detalhe.appendChild(instaBtn);
 
   card.appendChild(detalhe);
 }
