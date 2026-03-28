@@ -2108,7 +2108,7 @@ function openSuggestArena() {
   document.getElementById('arenaDropdown').classList.remove('open');
   document.getElementById('suggestArenaName').value = '';
   document.getElementById('suggestArenaCity').value = '';
-  document.getElementById('modalSuggestArena').style.display = 'flex';
+  document.getElementById('modalSuggestArena').classList.add('show');
 }
 
 function saveSuggestArena() {
@@ -2137,5 +2137,5 @@ document.addEventListener('click', () => {
   document.getElementById('arenaDropdown').classList.remove('open');
 });
 document.getElementById('modalSuggestArena').addEventListener('click', e => {
-  if (e.target.id === 'modalSuggestArena') closeModal('modalSuggestArena');
+  if (e.target.id === 'modalSuggestArena') cancelSuggestArena();
 });
