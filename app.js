@@ -1422,7 +1422,7 @@ function renderRankingTo(body, sortedOverride) {
     const row=document.createElement('div'); row.className='rt-row';
     row.innerHTML=`
       <div class="rt-pos">${medal}</div>
-      <div class="rt-name">${d.p1}<br><span>${d.p2}</span>${d.inactive?'<span class="gd-tag-out">fora</span>':''}</div>
+      <div class="rt-name">${d.p1} / ${d.p2}${d.inactive?' <span class="gd-tag-out">fora</span>':''}</div>
       <div class="rt-cell">${d.j}</div>
       <div class="rt-cell v">${d.v}</div>
       <div class="rt-cell">${d.d}</div>
