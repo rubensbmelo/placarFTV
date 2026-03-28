@@ -2119,8 +2119,17 @@ function saveSuggestArena() {
   list.push({ name, city: city || '' });
   saveCustomArenas(list);
   closeModal('modalSuggestArena');
+  reopenArenaDropdown();
+}
+
+function cancelSuggestArena() {
+  closeModal('modalSuggestArena');
+  reopenArenaDropdown();
+}
+
+function reopenArenaDropdown() {
   renderArenaDropList();
-  selectArena(name);
+  document.getElementById('arenaDropdown').classList.add('open');
 }
 
 // Fecha dropdown ao clicar fora
