@@ -2030,8 +2030,8 @@ if (loadState()) {
 const ARENAS_KEY = 'ftv_arenas';
 
 const ARENAS_DEFAULT = [
-  { name: 'Futshow Arena',            city: 'Candeias' },
-  { name: 'Arena Prime Futevôlei',    city: 'Piedade, Jaboatão dos Guararapes' },
+  { name: 'Futshow Arena',            city: 'Candeias',                          logo: 'assets/arena/futshow.png' },
+  { name: 'Arena Prime Futevôlei',    city: 'Piedade, Jaboatão dos Guararapes',  logo: 'assets/arena/arena_prime.png' },
 ];
 
 function loadCustomArenas() {
@@ -2048,13 +2048,18 @@ function renderArenaDropList() {
   const custom = loadCustomArenas();
   listEl.innerHTML = '';
 
+  function arenaLogoHTML(a) {
+    if (a.logo) return `<img src="${a.logo}" class="arena-drop-logo" alt="">`;
+    return `<span class="arena-drop-logo arena-drop-logo--fallback">🏟️</span>`;
+  }
+
   // Arenas fixas — sem botão de deletar
   ARENAS_DEFAULT.forEach(a => {
     const row = document.createElement('div');
     row.className = 'arena-drop-row';
     const btn = document.createElement('button');
     btn.className = 'arena-drop-item';
-    btn.innerHTML = `${a.name}<span class="arena-city">${a.city}</span>`;
+    btn.innerHTML = `${arenaLogoHTML(a)}<span class="arena-drop-item-text">${a.name}<span class="arena-city">${a.city}</span></span>`;
     btn.onclick = () => selectArena(a.name);
     row.appendChild(btn);
     listEl.appendChild(row);
@@ -2066,7 +2071,7 @@ function renderArenaDropList() {
     row.className = 'arena-drop-row';
     const btn = document.createElement('button');
     btn.className = 'arena-drop-item';
-    btn.innerHTML = `${a.name}<span class="arena-city">${a.city}</span>`;
+    btn.innerHTML = `${arenaLogoHTML(a)}<span class="arena-drop-item-text">${a.name}<span class="arena-city">${a.city}</span></span>`;
     btn.onclick = () => selectArena(a.name);
     const del = document.createElement('button');
     del.className = 'arena-drop-delete';
