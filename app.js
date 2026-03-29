@@ -1440,7 +1440,7 @@ function gerarCardInstagram(opts = {}) {
 
     // Watermark
     ctx.save();
-    ctx.globalAlpha = 0.05;
+    ctx.globalAlpha = 0.04;
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 340px "Bebas Neue", Impact, sans-serif';
     ctx.textAlign = 'center';
@@ -1450,9 +1450,15 @@ function gerarCardInstagram(opts = {}) {
 
     // Logo
     if (logoImg) {
-      const lh = 90;
+      const lh = 80;
       const lw = logoImg.width * (lh / logoImg.height);
-      ctx.drawImage(logoImg, 40, 15, lw, lh);
+      ctx.drawImage(logoImg, 40, 20, lw, lh);
+    } else {
+      ctx.fillStyle = '#D4AF37';
+      ctx.font = 'bold 28px "Bebas Neue", Impact, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('FTVScore', 40, 60);
     }
 
     // Title
@@ -1467,8 +1473,8 @@ function gerarCardInstagram(opts = {}) {
     ctx.font = '600 20px "Barlow Condensed", Arial, sans-serif';
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
-    if (displayDate) ctx.fillText(displayDate, W - 40, 44);
-    if (arenaStr)    ctx.fillText(arenaStr, W - 40, 72);
+    const headerRight = [arenaStr, displayDate].filter(Boolean).join('  ·  ');
+    if (headerRight) ctx.fillText(headerRight, W - 40, 60);
 
     // Header divider
     ctx.strokeStyle = 'rgba(212,175,55,0.35)';
@@ -1520,7 +1526,8 @@ function gerarCardInstagram(opts = {}) {
       // Position / medal
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       if (pos <= 3) {
-        ctx.font = '26px serif';
+        ctx.font = '28px sans-serif';
+        ctx.fillStyle = '#ffffff';
         ctx.fillText(pos === 1 ? '🥇' : pos === 2 ? '🥈' : '🥉', COL_POS, midY);
       } else {
         ctx.fillStyle = 'rgba(255,255,255,0.45)';
@@ -1578,10 +1585,16 @@ function gerarCardInstagram(opts = {}) {
     link.click();
   }
 
-  const img = new Image();
-  img.onload  = () => draw(img);
-  img.onerror = () => draw(null);
-  img.src = 'assets/logo.png';
+  fetch('./assets/logo.png')
+    .then(r => { if (!r.ok) throw new Error('logo'); return r.blob(); })
+    .then(blob => {
+      const url = URL.createObjectURL(blob);
+      const img = new Image();
+      img.onload  = () => { draw(img); URL.revokeObjectURL(url); };
+      img.onerror = () => draw(null);
+      img.src = url;
+    })
+    .catch(() => draw(null));
 }
 
 function calcPositions(sorted) {
@@ -2138,7 +2151,7 @@ function toggleTorneioDetalhe(card, t) {
   instaBtn.textContent = '📸 Card Instagram';
   instaBtn.onclick = (e) => {
     e.stopPropagation();
-    gerarCardInstagram({ duplas: t.duplas, date: t.evento_data || t.criado_em, arena: t.evento_nome, criado_em: t.criado_em });
+    gerarCardInstagram({ duplas: t.duplas, date: t.evento_data || t.criado_em, arena: t.evento_nome || t.partidas?.[0]?.arena, criado_em: t.criado_em });
   };
   detalhe.appendChild(instaBtn);
 
