@@ -1415,13 +1415,13 @@ function gerarCardInstagram(opts = {}) {
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
 
-  // Format date
+  // Format date in Portuguese
   let displayDate = '';
   if (rawDate) {
     const d = new Date(rawDate);
     if (!isNaN(d)) {
-      const months = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-      displayDate = `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+      const months = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+      displayDate = `${d.getDate()} de ${months[d.getMonth()]} de ${d.getFullYear()}`;
     } else {
       displayDate = rawDate;
     }
@@ -1433,22 +1433,53 @@ function gerarCardInstagram(opts = {}) {
   );
   const positions = calcPositions(sorted);
 
-  function draw(logoImg) {
+  // Helper: find arena logo path from ARENAS_DEFAULT + custom
+  function getArenaLogoPath(name) {
+    if (!name) return null;
+    const n = name.toLowerCase().trim();
+    const all = [...ARENAS_DEFAULT, ...loadCustomArenas()];
+    const match = all.find(a => a.logo && (a.name.toLowerCase().includes(n) || n.includes(a.name.toLowerCase())));
+    return match ? match.logo : null;
+  }
+
+  // Helper: load image via fetch/blob, trying multiple paths in order
+  function loadImg(paths, cb) {
+    const [first, ...rest] = paths;
+    if (!first) return cb(null);
+    fetch(first)
+      .then(r => { if (!r.ok) throw new Error('not ok'); return r.blob(); })
+      .then(blob => {
+        const url = URL.createObjectURL(blob);
+        const img = new Image();
+        img.onload  = () => { cb(img); URL.revokeObjectURL(url); };
+        img.onerror = () => loadImg(rest, cb);
+        img.src = url;
+      })
+      .catch(() => loadImg(rest, cb));
+  }
+
+  function draw(logoImg, arenaImg) {
     // Background
     ctx.fillStyle = '#0d1b2a';
     ctx.fillRect(0, 0, W, H);
 
-    // Watermark
+    // Watermark — logo PNG centered at low opacity, or text fallback
     ctx.save();
-    ctx.globalAlpha = 0.04;
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 340px "Bebas Neue", Impact, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('FTV', W / 2, H / 2);
+    ctx.globalAlpha = 0.06;
+    if (logoImg) {
+      const wmH = 320;
+      const wmW = logoImg.width * (wmH / logoImg.height);
+      ctx.drawImage(logoImg, (W - wmW) / 2, (H - wmH) / 2, wmW, wmH);
+    } else {
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 340px "Bebas Neue", Impact, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('FTV', W / 2, H / 2);
+    }
     ctx.restore();
 
-    // Logo
+    // Logo FTVScore (top-left)
     if (logoImg) {
       const lh = 80;
       const lw = logoImg.width * (lh / logoImg.height);
@@ -1461,20 +1492,34 @@ function gerarCardInstagram(opts = {}) {
       ctx.fillText('FTVScore', 40, 60);
     }
 
-    // Title
+    // Title (center)
     ctx.fillStyle = '#D4AF37';
     ctx.font = 'bold 52px "Bebas Neue", Impact, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('🏆 CLASSIFICAÇÃO', W / 2, 60);
 
-    // Date & Arena (right)
-    ctx.fillStyle = 'rgba(255,255,255,0.8)';
-    ctx.font = '600 20px "Barlow Condensed", Arial, sans-serif';
-    ctx.textAlign = 'right';
-    ctx.textBaseline = 'middle';
-    const headerRight = [arenaStr, displayDate].filter(Boolean).join('  ·  ');
-    if (headerRight) ctx.fillText(headerRight, W - 40, 60);
+    // Arena logo + date (top-right)
+    const rightX = W - 40;
+    if (arenaImg) {
+      const ah = 50;
+      const aw = arenaImg.width * (ah / arenaImg.height);
+      ctx.drawImage(arenaImg, rightX - aw, 10, aw, ah);
+      if (displayDate) {
+        ctx.fillStyle = 'rgba(255,255,255,0.8)';
+        ctx.font = '600 18px "Barlow Condensed", Arial, sans-serif';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(displayDate, rightX, 75);
+      }
+    } else {
+      ctx.fillStyle = 'rgba(255,255,255,0.8)';
+      ctx.font = '600 20px "Barlow Condensed", Arial, sans-serif';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      const headerRight = [arenaStr, displayDate].filter(Boolean).join('  ·  ');
+      if (headerRight) ctx.fillText(headerRight, rightX, 60);
+    }
 
     // Header divider
     ctx.strokeStyle = 'rgba(212,175,55,0.35)';
@@ -1514,7 +1559,7 @@ function gerarCardInstagram(opts = {}) {
 
     sorted.forEach((d, i) => {
       const ry = ROW_Y0 + i * ROW_H;
-      if (ry + ROW_H > H - 28) return;
+      if (ry + ROW_H > H - 55) return;
       const midY = ry + ROW_H / 2;
       const pos  = positions[i];
 
@@ -1571,11 +1616,16 @@ function gerarCardInstagram(opts = {}) {
       ctx.beginPath(); ctx.moveTo(40, ry + ROW_H); ctx.lineTo(W - 40, ry + ROW_H); ctx.stroke();
     });
 
-    // Footer
+    // Footer — @FTVSCORE in cyan + ftvscore.app.br
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#00CED1';
+    ctx.font = 'bold 28px "Bebas Neue", Impact, sans-serif';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('@FTVSCORE', W / 2, H - 36);
+
     ctx.fillStyle = 'rgba(255,255,255,0.18)';
     ctx.font = '16px "Barlow Condensed", Arial, sans-serif';
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('ftvscore.app', W / 2, H - 18);
+    ctx.fillText('ftvscore.app.br', W / 2, H - 14);
 
     // Download
     const fileDate = new Date().toISOString().slice(0, 10).replace(/-/g, '');
@@ -1585,16 +1635,15 @@ function gerarCardInstagram(opts = {}) {
     link.click();
   }
 
-  fetch('./assets/logo.png')
-    .then(r => { if (!r.ok) throw new Error('logo'); return r.blob(); })
-    .then(blob => {
-      const url = URL.createObjectURL(blob);
-      const img = new Image();
-      img.onload  = () => { draw(img); URL.revokeObjectURL(url); };
-      img.onerror = () => draw(null);
-      img.src = url;
-    })
-    .catch(() => draw(null));
+  const arenaLogoPath = getArenaLogoPath(arenaStr);
+
+  loadImg(['assets/logo.png', './assets/logo.png'], logoImg => {
+    if (arenaLogoPath) {
+      loadImg([arenaLogoPath], arenaImg => draw(logoImg, arenaImg));
+    } else {
+      draw(logoImg, null);
+    }
+  });
 }
 
 function calcPositions(sorted) {
