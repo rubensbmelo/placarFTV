@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p \"C:/DevClub/placarFTV-demo\")",
+      "Bash(cp \"C:/DevClub/Placar Futevolei/index.html\" \"C:/DevClub/placarFTV-demo/\")",
+      "Bash(cp \"C:/DevClub/Placar Futevolei/app.js\" \"C:/DevClub/placarFTV-demo/\")",
+      "Bash(cp \"C:/DevClub/Placar Futevolei/style.css\" \"C:/DevClub/placarFTV-demo/\")",
+      "Bash(cp -r \"C:/DevClub/Placar Futevolei/assets\" \"C:/DevClub/placarFTV-demo/\")",
+      "Bash(gh repo:*)",
+      "Bash(git:*)"
+    ]
+  }
+}
