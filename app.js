@@ -219,6 +219,9 @@ function stepDuplas(d) {
 
   const streakSection = document.getElementById('streakSection');
   const infoDesc      = document.getElementById('infoDesc');
+  const infoBox       = document.getElementById('infoBox');
+
+  if (infoBox) infoBox.style.display = numDuplas === 2 ? 'none' : '';
 
   if (numDuplas >= 6) {
     streakSection.style.display = 'none';
