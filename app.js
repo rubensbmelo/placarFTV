@@ -120,7 +120,7 @@ function stopTorneioTimer() {
 // ══════════════════════════════════════════════════════════
 //  ESTADO GLOBAL
 // ══════════════════════════════════════════════════════════
-let numDuplas    = 6;
+let numDuplas    = 2;
 let streakLimit  = 2;
 let permMode     = 'leave';
 let eventDate    = '';
@@ -2280,7 +2280,6 @@ if (loadState()) {
   buildDuplasGrid();
   document.getElementById('resetSection').style.display = 'none';
   document.getElementById('cfgDate').value = new Date().toISOString().split('T')[0];
-  document.getElementById('splashOv').classList.add('show');
 }
 
 // ══════════════════════════════════════════════════════════
