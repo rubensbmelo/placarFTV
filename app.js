@@ -177,7 +177,7 @@ function loadState() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return false;
     const s = JSON.parse(raw);
-    numDuplas     = s.numDuplas    ?? 6;
+    numDuplas     = s.numDuplas    ?? 2;
     streakLimit   = s.streakLimit  ?? 2;
     permMode      = s.permMode     ?? 'leave';
     eventDate     = s.eventDate    ?? '';
