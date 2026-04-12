@@ -1,915 +1,961 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-  <title>FTVScore — Placar & Ranking de FuteVôlei</title>
-  <meta name="description" content="App gratuito para organizar partidas, rodízio e ranking de futevôlei">
-  <meta name="theme-color" content="#071e34">
-  <link rel="icon" type="image/png" href="logo.png">
-  <link rel="apple-touch-icon" href="logo.png">
-  <link rel="manifest" href="manifest.json">
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FTVScore — Placar & Ranking</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:ital,wght@0,400;0,600;0,700;0,900;1,700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --gold: #C9A84C;
+  --gold-light: #F0D080;
+  --gold-dark: #8B6914;
+  --navy: #0D1B2A;
+  --navy-mid: #122030;
+  --navy-light: #1E3450;
+  --cyan: #00C9E0;
+  --white: #F5F0E8;
+  --gray: rgba(245,240,232,0.5);
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--navy);
+  color: var(--white);
+  font-family: 'Barlow', sans-serif;
+  overflow-x: hidden;
+}
+
+/* ── NAV ── */
+nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 48px;
+  height: 68px;
+  background: rgba(13,27,42,0.85);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(201,168,76,0.12);
+}
+
+.nav-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+
+.nav-logo-icon {
+  width: 36px; height: 36px;
+  background: linear-gradient(135deg, var(--gold-light), var(--gold-dark));
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+}
+
+.nav-logo-text {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px;
+  letter-spacing: 4px;
+  color: var(--white);
+}
+
+.nav-logo-sub {
+  font-size: 10px;
+  letter-spacing: 3px;
+  color: var(--cyan);
+  font-weight: 600;
+  margin-top: -4px;
+  display: block;
+}
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-entrar {
+  padding: 10px 24px;
+  background: transparent;
+  border: 1px solid rgba(201,168,76,0.4);
+  border-radius: 8px;
+  color: var(--gold);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: all .2s;
+  text-decoration: none;
+}
+.btn-entrar:hover {
+  background: rgba(201,168,76,0.1);
+  border-color: var(--gold);
+}
+
+.btn-criar {
+  padding: 10px 24px;
+  background: linear-gradient(135deg, var(--gold-light), var(--gold));
+  border: none;
+  border-radius: 8px;
+  color: var(--navy);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: all .2s;
+  text-decoration: none;
+}
+.btn-criar:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(201,168,76,0.4);
+}
+
+/* ── HERO ── */
+.hero {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 100px 24px 80px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Background glow orb */
+.hero::before {
+  content: '';
+  position: absolute;
+  width: 700px; height: 700px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(201,168,76,0.12) 0%, transparent 70%);
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+/* Grid texture */
+.hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(201,168,76,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(201,168,76,0.04) 1px, transparent 1px);
+  background-size: 60px 60px;
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 50%, black 0%, transparent 100%);
+  pointer-events: none;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(201,168,76,0.1);
+  border: 1px solid rgba(201,168,76,0.3);
+  border-radius: 20px;
+  padding: 7px 18px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 3px;
+  color: var(--gold);
+  margin-bottom: 36px;
+  animation: fadeUp .8s ease both;
+}
+
+.hero-logo {
+  width: 100px; height: 100px;
+  background: linear-gradient(145deg, var(--navy-light), var(--navy-mid));
+  border: 2px solid rgba(201,168,76,0.5);
+  border-radius: 28px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 50px;
+  margin: 0 auto 40px;
+  box-shadow: 0 0 60px rgba(201,168,76,0.25), inset 0 1px 0 rgba(255,255,255,0.05);
+  animation: fadeUp .8s ease .1s both;
+}
+
+.hero-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(52px, 8vw, 96px);
+  letter-spacing: 4px;
+  line-height: 1.0;
+  color: var(--white);
+  text-shadow: 0 4px 40px rgba(0,0,0,0.5);
+  animation: fadeUp .8s ease .2s both;
+  max-width: 900px;
+}
+
+.hero-title span {
+  color: var(--gold);
+  display: block;
+}
+
+.hero-sub {
+  margin-top: 24px;
+  font-size: 18px;
+  font-weight: 300;
+  color: var(--gray);
+  line-height: 1.6;
+  max-width: 500px;
+  animation: fadeUp .8s ease .3s both;
+}
+
+.hero-cta {
+  margin-top: 48px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+  animation: fadeUp .8s ease .4s both;
+}
+
+.btn-hero-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 40px;
+  background: linear-gradient(135deg, var(--gold-light), var(--gold));
+  border: none;
+  border-radius: 12px;
+  color: var(--navy);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 20px;
+  letter-spacing: 4px;
+  cursor: pointer;
+  text-decoration: none;
+  box-shadow: 0 8px 30px rgba(201,168,76,0.35);
+  transition: all .25s;
+}
+.btn-hero-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(201,168,76,0.5);
+}
+
+.btn-hero-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 18px 32px;
+  background: transparent;
+  border: 1px solid rgba(245,240,232,0.2);
+  border-radius: 12px;
+  color: var(--gray);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all .25s;
+}
+.btn-hero-secondary:hover {
+  border-color: rgba(245,240,232,0.4);
+  color: var(--white);
+}
+
+.hero-stats {
+  margin-top: 72px;
+  display: flex;
+  gap: 48px;
+  flex-wrap: wrap;
+  justify-content: center;
+  animation: fadeUp .8s ease .5s both;
+}
+
+.stat-item {
+  text-align: center;
+}
+
+.stat-num {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 36px;
+  letter-spacing: 2px;
+  color: var(--gold);
+}
+
+.stat-label {
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: var(--gray);
+  margin-top: 2px;
+  font-weight: 500;
+}
+
+.stat-div {
+  width: 1px;
+  height: 40px;
+  background: rgba(201,168,76,0.2);
+  align-self: center;
+}
+
+/* ── COMO FUNCIONA ── */
+.section {
+  padding: 100px 48px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.section-eyebrow {
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  color: var(--cyan);
+  margin-bottom: 12px;
+}
+
+.section-title {
+  text-align: center;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(40px, 5vw, 64px);
+  letter-spacing: 4px;
+  line-height: 1;
+  margin-bottom: 12px;
+}
+
+.section-title span { color: var(--gold); }
+
+.section-sub {
+  text-align: center;
+  font-size: 16px;
+  color: var(--gray);
+  margin-bottom: 64px;
+  font-weight: 300;
+}
+
+/* Steps */
+.steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+@media (max-width: 768px) {
+  .steps { grid-template-columns: 1fr; }
+  nav { padding: 0 20px; }
+  .section { padding: 80px 24px; }
+  .hero-stats { gap: 24px; }
+  .stat-div { display: none; }
+}
+
+.step-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 20px;
+  padding: 36px 32px;
+  position: relative;
+  overflow: hidden;
+  transition: all .3s;
+}
+
+.step-card:hover {
+  border-color: rgba(201,168,76,0.3);
+  background: rgba(201,168,76,0.04);
+  transform: translateY(-4px);
+}
+
+.step-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  opacity: 0;
+  transition: opacity .3s;
+}
+.step-card:hover::before { opacity: 1; }
+
+.step-num {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 72px;
+  letter-spacing: 2px;
+  color: rgba(201,168,76,0.08);
+  line-height: 1;
+  position: absolute;
+  top: 20px; right: 24px;
+}
+
+.step-icon {
+  width: 56px; height: 56px;
+  background: linear-gradient(135deg, rgba(201,168,76,0.2), rgba(201,168,76,0.05));
+  border: 1px solid rgba(201,168,76,0.3);
+  border-radius: 16px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px;
+  margin-bottom: 24px;
+}
+
+.step-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 24px;
+  letter-spacing: 2px;
+  margin-bottom: 10px;
+  color: var(--white);
+}
+
+.step-desc {
+  font-size: 14px;
+  font-weight: 300;
+  color: var(--gray);
+  line-height: 1.6;
+}
+
+/* ── DIFERENCIAIS ── */
+.diff-section {
+  background: linear-gradient(180deg, transparent, rgba(201,168,76,0.03), transparent);
+  border-top: 1px solid rgba(201,168,76,0.08);
+  border-bottom: 1px solid rgba(201,168,76,0.08);
+  padding: 100px 48px;
+}
+
+.diff-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.diff-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  margin-top: 64px;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .diff-grid { grid-template-columns: 1fr; }
+  .diff-section { padding: 80px 24px; }
+}
+
+.diff-item {
+  padding: 40px 32px;
+  background: rgba(255,255,255,0.02);
+  border-right: 1px solid rgba(255,255,255,0.06);
+  transition: background .3s;
+}
+.diff-item:last-child { border-right: none; }
+.diff-item:hover { background: rgba(201,168,76,0.05); }
+
+.diff-icon {
+  font-size: 32px;
+  margin-bottom: 16px;
+  display: block;
+}
+
+.diff-title {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--white);
+  margin-bottom: 8px;
+}
+
+.diff-desc {
+  font-size: 14px;
+  font-weight: 300;
+  color: var(--gray);
+  line-height: 1.6;
+}
+
+/* ── PUBLICOS ── */
+.publicos-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-top: 64px;
+}
+
+@media (max-width: 768px) {
+  .publicos-grid { grid-template-columns: 1fr; }
+}
+
+.publico-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 20px;
+  padding: 36px 28px;
+  transition: all .3s;
+}
+
+.publico-card:hover {
+  border-color: rgba(201,168,76,0.3);
+  transform: translateY(-4px);
+}
+
+.publico-emoji {
+  font-size: 36px;
+  margin-bottom: 16px;
+  display: block;
+}
+
+.publico-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px;
+  letter-spacing: 2px;
+  color: var(--gold);
+  margin-bottom: 10px;
+}
+
+.publico-desc {
+  font-size: 14px;
+  color: var(--gray);
+  line-height: 1.6;
+  font-weight: 300;
+}
+
+/* ── CTA FINAL ── */
+.cta-section {
+  padding: 120px 48px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.cta-section::before {
+  content: '';
+  position: absolute;
+  width: 600px; height: 400px;
+  background: radial-gradient(ellipse, rgba(201,168,76,0.1) 0%, transparent 70%);
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.cta-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(40px, 6vw, 80px);
+  letter-spacing: 4px;
+  line-height: 1;
+  margin-bottom: 20px;
+}
+
+.cta-title span { color: var(--gold); }
+
+.cta-sub {
+  font-size: 17px;
+  color: var(--gray);
+  margin-bottom: 48px;
+  font-weight: 300;
+  max-width: 480px;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.6;
+}
+
+.cta-buttons {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* ── FOOTER ── */
+footer {
+  border-top: 1px solid rgba(201,168,76,0.1);
+  padding: 32px 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.footer-logo {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 18px;
+  letter-spacing: 4px;
+  color: var(--gold);
+}
+
+.footer-sub {
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: rgba(245,240,232,0.25);
+}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.reveal {
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity .7s ease, transform .7s ease;
+}
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Stagger children */
+.reveal-group > * {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity .6s ease, transform .6s ease;
+}
+.reveal-group.visible > *:nth-child(1) { opacity:1; transform:translateY(0); transition-delay:.05s; }
+.reveal-group.visible > *:nth-child(2) { opacity:1; transform:translateY(0); transition-delay:.15s; }
+.reveal-group.visible > *:nth-child(3) { opacity:1; transform:translateY(0); transition-delay:.25s; }
+
+/* ── FLOW STEPS ── */
+.flow-steps { display:flex; flex-direction:column; gap:32px; }
+
+.flow-row {
+  display: grid;
+  grid-template-columns: 1fr 40px 1fr;
+  align-items: center;
+  gap: 32px;
+  padding: 36px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 24px;
+  transition: border-color .3s;
+}
+.flow-row:hover { border-color: rgba(201,168,76,0.25); }
+.flow-row-rev .flow-mockup { order:3; }
+.flow-row-rev .flow-arrow  { order:2; }
+.flow-row-rev .flow-text   { order:1; }
+
+@media(max-width:768px){
+  .flow-row,.flow-row-rev { grid-template-columns:1fr; }
+  .flow-arrow { display:none; }
+  .flow-row-rev .flow-mockup,.flow-row-rev .flow-text { order:unset; }
+}
+
+.flow-arrow { font-size:22px; color:rgba(201,168,76,0.3); text-align:center; }
+.flow-num { font-family:'Bebas Neue',sans-serif; font-size:60px; line-height:1; color:rgba(201,168,76,0.12); margin-bottom:4px; }
+.flow-title { font-family:'Bebas Neue',sans-serif; font-size:24px; letter-spacing:2px; color:var(--white); margin-bottom:8px; }
+.flow-desc { font-size:14px; font-weight:300; color:var(--gray); line-height:1.7; }
+
+.flow-mockup {
+  background:#0a1520;
+  border:1px solid rgba(201,168,76,0.2);
+  border-radius:14px;
+  padding:18px;
+  display:flex; flex-direction:column; gap:8px;
+}
+
+.mockup-btn-gold {
+  background:linear-gradient(135deg,#F0D080,#C9A84C);
+  color:#0D1B2A;
+  font-family:'Bebas Neue',sans-serif; font-size:15px; letter-spacing:3px;
+  padding:15px 18px; border-radius:9px; text-align:center;
+}
+.mockup-btn-green {
+  background:#2a6e40; color:white;
+  font-family:'Bebas Neue',sans-serif; font-size:14px; letter-spacing:3px;
+  padding:13px 18px; border-radius:9px; text-align:center; margin-top:4px;
+}
+.mockup-field {
+  background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1);
+  border-radius:7px; padding:9px 13px; font-size:12px; color:rgba(245,240,232,0.55); letter-spacing:1px;
+}
+.mockup-players { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+.mockup-player { background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08); border-radius:6px; padding:7px 10px; font-size:12px; color:rgba(245,240,232,0.4); text-align:center; }
+
+.mockup-config-row { display:flex; align-items:center; justify-content:space-between; background:rgba(255,255,255,0.05); border-radius:9px; padding:11px 13px; }
+.mockup-label { font-size:12px; font-weight:700; letter-spacing:1px; color:var(--white); }
+.mockup-counter { display:flex; align-items:center; gap:10px; background:rgba(255,255,255,0.1); border-radius:7px; padding:4px 12px; font-family:'Bebas Neue',sans-serif; font-size:17px; color:var(--white); }
+.mockup-counter span { color:var(--gold); }
+
+.mockup-toggle-row { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.mockup-toggle-label { font-size:10px; letter-spacing:2px; color:rgba(245,240,232,0.3); }
+.mockup-toggles { display:flex; background:rgba(255,255,255,0.05); border-radius:7px; overflow:hidden; }
+.tog { padding:6px 11px; font-size:10px; font-weight:700; letter-spacing:1px; color:rgba(245,240,232,0.3); }
+.tog.active { background:var(--gold); color:var(--navy); border-radius:7px; }
+
+.mockup-score-area { display:grid; grid-template-columns:1fr 28px 1fr; align-items:center; padding:14px 6px; gap:6px; }
+.mockup-score-side { text-align:center; }
+.mockup-team-name { font-size:10px; font-weight:700; letter-spacing:1.5px; margin-bottom:5px; color:rgba(245,240,232,0.45); }
+.mockup-score-num { font-family:'Bebas Neue',sans-serif; font-size:48px; line-height:1; }
+.mockup-score-num.gold { color:#F5A000; }
+.mockup-score-num.blue { color:#60A0F0; }
+.mockup-vs { font-family:'Bebas Neue',sans-serif; font-size:13px; color:rgba(245,240,232,0.2); text-align:center; }
+
+.mockup-option { background:rgba(201,168,76,0.1); border:1px solid rgba(201,168,76,0.25); border-radius:9px; padding:11px 14px; font-family:'Bebas Neue',sans-serif; font-size:13px; letter-spacing:2px; color:var(--gold); text-align:center; }
+.mockup-option.outline { background:transparent; border-color:rgba(255,255,255,0.1); color:rgba(245,240,232,0.45); }
+.mockup-option.red { border-color:rgba(255,80,80,0.2); color:rgba(255,120,120,0.5); }
+
+/* Divider */
+.section-divider {
+  width: 60px; height: 2px;
+  background: linear-gradient(90deg, var(--gold-dark), var(--gold-light));
+  margin: 0 auto 48px;
+  border-radius: 2px;
+}
+</style>
 </head>
 <body>
 
-<div class="app">
-
-  <!-- Header fixo com logo -->
-  <div class="top-header" id="topHeader">
-    <img src="logo.png" alt="FTVScore" class="top-logo">
-  </div>
-
-  <!-- ════ TELA 0: SETUP (STEPPER 3 PASSOS) ════ -->
-  <div class="screen active" id="screen-0">
-
-    <!-- ── PASSO 1: Configurações ── -->
-    <div class="setup-step active" id="stepPanel1">
-      <div class="step-header">
-        <div class="step-title">CONFIGURAÇÃO</div>
-        <div class="step-date-display" id="step1DateDisplay"></div>
-      </div>
-      <div class="step-badge">PASSO 1 DE 3</div>
-
-      <div class="step-summary-card">
-        <div class="step-summary-text" id="lblDuplas">6 DUPLAS · 15 PARTIDAS</div>
-        <div class="stepper">
-          <button class="step-btn" onclick="stepDuplas(-1)">−</button>
-          <div class="step-val" id="stepDuplas">6</div>
-          <button class="step-btn" onclick="stepDuplas(1)">+</button>
-        </div>
-      </div>
-
-      <div class="seg-section" id="streakSection" style="display:none">
-        <div class="seg-label">SAIR DA QUADRA</div>
-        <div class="tog-group">
-          <button class="tog-btn sel" data-s="2"  onclick="selStreak(2)">2×</button>
-          <button class="tog-btn"     data-s="3"  onclick="selStreak(3)">3×</button>
-          <button class="tog-btn"     data-s="99" onclick="selStreak(99)">Livre</button>
-        </div>
-      </div>
-
-      <div class="seg-section seg-section--row">
-        <div class="seg-label">TROCA DE LADO</div>
-        <div class="tog-group tog-group--compact">
-          <button class="tog-btn" id="trocaLadoSim" onclick="setTrocaLado(true)">5 pts</button>
-          <button class="tog-btn sel" id="trocaLadoNao" onclick="setTrocaLado(false)">Não</button>
-        </div>
-      </div>
-
-      <div class="info-box" id="infoBox">
-        ⚽ <strong id="infoN">6 duplas</strong> →
-        <span id="infoDesc">rodada inicial: <strong id="infoRodadaPairs">3 jogos</strong> em sequência (D1×D2, D3×D4, D5×D6). Depois: <strong>ganhou ou perdeu, sai da quadra</strong> — sempre entram as 2 próximas da fila. Espera máx.: <strong id="infoWait">~3 jogos</strong>.</span>
-      </div>
+<!-- NAV -->
+<nav>
+  <a href="#" class="nav-logo">
+    <div class="nav-logo-icon">⚽</div>
+    <div>
+      <div class="nav-logo-text">FTVSCORE</div>
+      <span class="nav-logo-sub">PLACAR & RANKING</span>
     </div>
+  </a>
+  <div class="nav-actions">
+    <a href="/app/" class="btn-entrar">ENTRAR</a>
+    <a href="/app/" class="btn-criar">CRIAR CONTA</a>
+  </div>
+</nav>
 
-    <!-- ── PASSO 2: Duplas ── -->
-    <div class="setup-step" id="stepPanel2">
-      <button class="setup-back-btn" onclick="goSetupStep(1)">← Voltar</button>
-      <div class="step-badge">PASSO 2 DE 3</div>
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-badge">⚽ O PLACAR INTELIGENTE DA SUA PELADA</div>
+  <div class="hero-logo">🏆</div>
+  <h1 class="hero-title">
+    ORGANIZE SUA PELADA
+    <span>EM MINUTOS</span>
+  </h1>
+  <p class="hero-sub">
+    Rodízio automático, ranking em tempo real e histórico salvo na nuvem. Simples, rápido, sem complicação.
+  </p>
+  <div class="hero-cta">
+    <a href="/app/" class="btn-hero-primary">INICIAR PELADA GRÁTIS →</a>
+    <a href="#como-funciona" class="btn-hero-secondary">↓ Como funciona</a>
+  </div>
+  <div class="hero-stats">
+    <div class="stat-item">
+      <div class="stat-num">2min</div>
+      <div class="stat-label">PRA COMEÇAR</div>
+    </div>
+    <div class="stat-div"></div>
+    <div class="stat-item">
+      <div class="stat-num">100%</div>
+      <div class="stat-label">GRATUITO</div>
+    </div>
+    <div class="stat-div"></div>
+    <div class="stat-item">
+      <div class="stat-num">∞</div>
+      <div class="stat-label">PELADAS SALVAS</div>
+    </div>
+  </div>
+</section>
 
-      <div class="step-arena-section">
-        <div class="seg-label">DATA & ARENA</div>
-        <div class="event-fields">
-          <input class="form-input" type="date" id="cfgDate">
-          <div class="arena-field-wrap">
-            <input class="form-input" type="text" id="cfgEventName" placeholder="Ex: Pelada da Praia · Boa Viagem" maxlength="40">
-            <button class="arena-pick-btn" onclick="toggleArenaDropdown(event)" title="Selecionar arena">🏟️</button>
-            <div class="arena-dropdown" id="arenaDropdown">
-              <div class="arena-drop-header">
-                <span class="arena-drop-title">Selecionar arena</span>
-                <button class="arena-drop-close" onclick="closeArenaDropdown(event)" title="Fechar">✕</button>
-              </div>
-              <div class="arena-drop-list" id="arenaDropList"></div>
-              <div class="arena-drop-divider"></div>
-              <button class="arena-drop-suggest" onclick="openSuggestArena()">➕ Sugerir arena</button>
+<!-- COMO FUNCIONA -->
+<section id="como-funciona" style="background: rgba(0,0,0,0.2); padding: 100px 0;">
+  <div class="section" style="padding-top:0; padding-bottom:0;">
+    <p class="section-eyebrow reveal">PASSO A PASSO</p>
+    <h2 class="section-title reveal">COMO <span>FUNCIONA</span></h2>
+    <p class="section-sub reveal">Simples, rápido e sem complicação.<br>Monte sua pelada em menos de 2 minutos.</p>
+    <div class="section-divider reveal"></div>
+
+    <div class="flow-steps">
+
+      <!-- Step 1 -->
+      <div class="flow-row reveal">
+        <div class="flow-mockup mockup-gold">
+          <div class="mockup-btn-gold">⚽ INICIAR NOVA PELADA</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-text">
+          <div class="flow-num">01</div>
+          <div class="flow-title">CLIQUE EM INICIAR NOVA PELADA</div>
+          <p class="flow-desc">Na tela inicial, toque no botão dourado e comece a montar sua pelada na hora.</p>
+        </div>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="flow-row flow-row-rev reveal">
+        <div class="flow-text">
+          <div class="flow-num">02</div>
+          <div class="flow-title">CONFIGURE AS REGRAS</div>
+          <p class="flow-desc">Quantas duplas jogam? Quem ganha fica na quadra? Troca de lado a cada 5 pontos? Você decide.</p>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-mockup">
+          <div class="mockup-config-row">
+            <span class="mockup-label">4 DUPLAS · 6 PARTIDAS</span>
+            <div class="mockup-counter"><span>−</span><strong>4</strong><span>+</span></div>
+          </div>
+          <div class="mockup-toggle-row">
+            <div class="mockup-toggle-label">SAIR DA QUADRA</div>
+            <div class="mockup-toggles">
+              <span class="tog active">2×</span>
+              <span class="tog">3×</span>
+              <span class="tog">LIVRE</span>
+            </div>
+          </div>
+          <div class="mockup-toggle-row">
+            <div class="mockup-toggle-label">TROCA DE LADO</div>
+            <div class="mockup-toggles">
+              <span class="tog active">5 PTS</span>
+              <span class="tog">NÃO</span>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="seg-label" style="margin-bottom:8px">DUPLAS</div>
-      <div class="duplas-grid duplas-grid-light" id="duplasGrid"></div>
-    </div>
-
-    <!-- ── PASSO 3: Revisão ── -->
-    <div class="setup-step" id="stepPanel3">
-      <button class="setup-back-btn" onclick="goSetupStep(2)">← Voltar</button>
-      <div class="step-badge">PASSO 3 DE 3</div>
-      <div class="step-title" style="margin-bottom:16px">REVISÃO</div>
-
-      <div class="review-card">
-        <div id="reviewContent"></div>
-      </div>
-
-      <button class="btn-start" onclick="startTorneio()">INICIAR PELADA 🏐</button>
-
-      <div id="resetSection" style="margin-top:10px;display:none">
-        <button class="btn-reset" onclick="confirmReset()">
-          🗑 Zerar pelada em andamento
-        </button>
-      </div>
-    </div>
-
-    <!-- ── Footer de navegação entre steps (fixo, acima da bottom nav) ── -->
-    <div class="setup-nav-footer" id="setupNavFooter">
-      <button class="setup-next-btn" id="setupNextBtn" onclick="setupGoNext()">PRÓXIMO: DEFINIR DUPLAS →</button>
-    </div>
-
-  </div>
-
-  <!-- ════ TELA 1: TORNEIO ════ -->
-  <div class="screen" id="screen-1">
-
-    <!-- Sub-abas -->
-    <div class="torneio-subtabs">
-      <button class="tor-subtab active" id="torTab-placar"    onclick="goTorneioSubTab('placar')">Placar</button>
-      <button class="tor-subtab"        id="torTab-fila"       onclick="goTorneioSubTab('fila')">Fila</button>
-      <button class="tor-subtab"        id="torTab-historico"  onclick="goTorneioSubTab('historico')">Histórico</button>
-    </div>
-
-    <!-- ── Sub: PLACAR ── -->
-    <div class="tor-subcontent active" id="torSub-placar">
-
-    <!-- Barra do evento -->
-    <div class="event-bar" id="eventBar" style="display:none">
-      <span class="event-bar-icon">🏖️</span>
-      <div class="event-bar-info">
-        <div class="event-bar-name" id="eventBarName"></div>
-        <div class="event-bar-date" id="eventBarDate"></div>
-      </div>
-      <button class="event-bar-reset" onclick="confirmReset()" title="Zerar pelada">🗑</button>
-    </div>
-
-    <!-- Botão zerar — sempre visível na tela do torneio -->
-    <div class="reset-bar" id="resetBar">
-      <button class="btn-reset-inline" onclick="confirmReset()">🗑 Zerar pelada</button>
-    </div>
-
-    <!-- Progress + timer geral -->
-    <div class="progress-wrap">
-      <div class="progress-label">
-        <span id="progressTxt">0 de 15 partidas</span>
-        <span id="progressPct">0%</span>
-      </div>
-      <div class="progress-bar">
-        <div class="progress-fill" id="progressFill" style="width:0%"></div>
-      </div>
-      <div class="torneio-timer-row">
-        <span class="tt-label">⏱ Pelada em andamento</span>
-        <span class="tt-val" id="torneioTimer">00:00:00</span>
-      </div>
-    </div>
-
-    <!-- ── PARTIDA ATUAL ── -->
-    <div id="matchArea">
-      <div class="fase-tag fase1" id="faseTag">🏁 FASE 1 — Todos contra Todos</div>
-
-      <div class="match-card">
-        <div class="match-header">
-          <div class="mh-left">
-            <div class="match-num"     id="matchNum">Partida 1</div>
-            <div class="match-context" id="matchContext"></div>
+      <!-- Step 3 -->
+      <div class="flow-row reveal">
+        <div class="flow-mockup">
+          <div class="mockup-field">📅 12/04/2026</div>
+          <div class="mockup-field">📍 Arena Boa Viagem</div>
+          <div class="mockup-players">
+            <div class="mockup-player">Jogador A</div>
+            <div class="mockup-player">Jogador B</div>
           </div>
-          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;">
-            <div class="mh-badges"   id="matchBadges"></div>
-            <div class="match-timer" id="matchTimer">⏱ 00:00</div>
+          <div class="mockup-players">
+            <div class="mockup-player">Jogador C</div>
+            <div class="mockup-player">Jogador D</div>
           </div>
         </div>
-
-        <!-- Overlay de START — aparece antes de iniciar -->
-        <div class="match-start-overlay" id="matchStartOverlay" onclick="startMatch()">
-          <button class="match-start-btn" onclick="startMatch()">
-            ▶ INICIAR PARTIDA
-          </button>
-          <div class="match-start-sub">Toque para começar e iniciar o cronômetro</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-text">
+          <div class="flow-num">03</div>
+          <div class="flow-title">ESCOLHA DATA, LOCAL E DUPLAS</div>
+          <p class="flow-desc">Defina a data, o nome do local e cadastre os jogadores de cada dupla. Rápido e direto.</p>
         </div>
+      </div>
 
-        <!-- Zona de placar — desabilitada até apertar START -->
-        <div id="scoreZone" style="opacity:0.3;pointer-events:none;">
-          <div class="score-area">
-            <div class="ts a">
-              <div id="mnA"></div>
-              <div class="score-num" id="snA" onclick="addScore('a')">0</div>
-              <div class="sc-btns">
-                <button class="sc-btn plus"  onclick="addScore('a')">+1</button>
-                <button class="sc-btn minus" onclick="subScore('a')">−</button>
-              </div>
+      <!-- Step 4 -->
+      <div class="flow-row flow-row-rev reveal">
+        <div class="flow-text">
+          <div class="flow-num">04</div>
+          <div class="flow-title">INICIA A PELADA!</div>
+          <p class="flow-desc">Toque em Iniciar Partida. O cronômetro começa, o placar fica na tela, é só jogar.</p>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-mockup">
+          <div class="mockup-score-area">
+            <div class="mockup-score-side">
+              <div class="mockup-team-name">DUPLA 1</div>
+              <div class="mockup-score-num gold">0</div>
             </div>
-            <div class="mid-div"><div class="vs">VS</div></div>
-            <div class="ts b">
-              <div id="mnB"></div>
-              <div class="score-num" id="snB" onclick="addScore('b')">0</div>
-              <div class="sc-btns">
-                <button class="sc-btn plus"  onclick="addScore('b')">+1</button>
-                <button class="sc-btn minus" onclick="subScore('b')">−</button>
-              </div>
+            <div class="mockup-vs">VS</div>
+            <div class="mockup-score-side">
+              <div class="mockup-team-name">DUPLA 2</div>
+              <div class="mockup-score-num blue">0</div>
             </div>
           </div>
-        </div>
-
-        <button class="finish-btn" id="finishBtn" style="display:none" onclick="openFinish()">✓ FINALIZAR PARTIDA</button>
-      </div>
-
-      <div class="hint">Toque no número ou +1 para pontuar</div>
-      <button class="pull-btn" id="pullBtn" onclick="openPullMatch()">⚡ Puxar outro jogo agora</button>
-      <button class="escalacao-btn" id="escalacaoBtn" onclick="openEscalacao()">📋 Escalação Livre</button>
-      <button class="end-torneio-btn" id="endTorneioBtn" onclick="confirmarEncerrarTorneio()">🏆 Terminar Campeonato</button>
-
-      <div class="proximas-card" id="proximasCard">
-        <div class="prox-title">⏭ Próximas partidas previstas</div>
-        <div id="proximasList"></div>
-      </div>
-    </div>
-
-    <!-- ── FIM DA FASE 1 ── -->
-    <div id="fase1End" style="display:none;">
-      <div class="fase-end-card">
-        <div class="fe-icon">🏁</div>
-        <h2>Fase 1 Concluída!</h2>
-        <p>Todas as duplas jogaram contra todas.<br>Confira o ranking e decida o que fazer!</p>
-
-        <!-- Ranking inline por jogador -->
-        <div class="ranking-table" style="margin:16px 0;">
-          <div class="rt-head rt-row-player">
-            <span>#</span><span>Jogador</span>
-            <span>J</span><span>V</span><span>D</span><span>Saldo</span><span>Pts</span>
-          </div>
-          <div id="rankingF1"></div>
-        </div>
-
-        <div class="fe-buttons">
-          <button class="fe-btn primary" onclick="openFase2Builder()">
-            ⚡ Continuar com Fase 2
-          </button>
-          <button class="fe-btn danger" onclick="encerrarTorneio()">
-            🏆 Encerrar Pelada
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ── CONSTRUTOR DA FASE 2 ── -->
-    <div id="fase2Builder" style="display:none;">
-      <div class="fase-end-card">
-        <div class="fe-icon">⚡</div>
-        <h2>Fase 2 — Monte as Partidas</h2>
-        <p>Selecione as duplas para cada confronto na ordem que quiser jogar.</p>
-
-        <!-- Seletor de duplas -->
-        <div class="f2-selector-wrap">
-          <div class="f2-sel-label">Selecione as duplas do próximo confronto:</div>
-          <div class="f2-dupla-grid" id="f2Selector"></div>
-          <div id="f2Preview"></div>
-        </div>
-
-        <!-- Lista de partidas montadas -->
-        <div class="f2-list-title">
-          Partidas montadas: <span id="f2MatchCount">0</span>
-        </div>
-        <div id="f2MatchList"></div>
-
-        <div class="fe-buttons" style="margin-top:16px;">
-          <button class="fe-btn primary"   onclick="startFase2()">
-            ▶ Iniciar Fase 2
-          </button>
-          <button class="fe-btn secondary" onclick="showFase1End()">
-            ← Voltar
-          </button>
-          <button class="fe-btn danger"    onclick="encerrarTorneio()">
-            🏆 Encerrar Pelada
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ── PAUSA ENTRE LOTES DA FASE 2 ── -->
-    <div id="fase2Paused" style="display:none;">
-      <div class="fase-end-card">
-        <div class="fe-icon">⏸</div>
-        <h2>Lote Concluído!</h2>
-        <p>Fase 2 · <span id="f2pDone">0</span> de <span id="f2pTotal">0</span> partidas jogadas</p>
-
-        <!-- Ranking inline por jogador -->
-        <div class="ranking-table" style="margin:16px 0;">
-          <div class="rt-head rt-row-player">
-            <span>#</span><span>Jogador</span>
-            <span>J</span><span>V</span><span>D</span><span>Saldo</span><span>Pts</span>
-          </div>
-          <div id="rankingF2Paused"></div>
-        </div>
-
-        <div class="fe-buttons">
-          <button class="fe-btn primary" onclick="adicionarMaisPartidas()">
-            + Adicionar Mais Partidas
-          </button>
-          <button class="fe-btn danger"  onclick="encerrarTorneio()">
-            🏆 Encerrar Pelada
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ── TORNEIO ENCERRADO ── -->
-    <div id="torneioEnd" style="display:none;">
-
-      <!-- Header -->
-      <div class="te-header">
-        <div class="te-trophy">🏆</div>
-        <h1 class="te-title">Pelada Encerrada!</h1>
-        <div class="te-event-info" id="teEventInfo"></div>
-        <div class="te-save-badge" id="teSaveBadge" style="display:none"></div>
-        <div class="te-stats-row">
-          <div class="te-stat"><span id="teTotal">0</span><small>partidas</small></div>
-          <div class="te-stat"><span id="teDuracao">00:00:00</span><small>duração</small></div>
-          <div class="te-stat"><span id="teMedia">00:00</span><small>média/jogo</small></div>
+          <div class="mockup-btn-green">▶ INICIAR PARTIDA</div>
         </div>
       </div>
 
-      <!-- Pódio top 3 -->
-      <div class="te-podio">
-        <div class="te-podio-slot segundo" id="podio2">
-          <div class="te-podio-medal">🥈</div>
-          <div class="te-podio-name" id="podio2Name"></div>
-          <div class="te-podio-pts" id="podio2Pts"></div>
-          <div class="te-podio-bar p2"></div>
+      <!-- Step 5 -->
+      <div class="flow-row reveal">
+        <div class="flow-mockup">
+          <div class="mockup-option">⚡ PUXAR OUTRO JOGO AGORA</div>
+          <div class="mockup-option outline">📋 ESCALAÇÃO LIVRE</div>
+          <div class="mockup-option outline red">🏆 ENCERRAR PELADA</div>
         </div>
-        <div class="te-podio-slot primeiro" id="podio1">
-          <div class="te-podio-crown">👑</div>
-          <div class="te-podio-medal">🥇</div>
-          <div class="te-podio-name" id="podio1Name"></div>
-          <div class="te-podio-pts" id="podio1Pts"></div>
-          <div class="te-podio-bar p1"></div>
-        </div>
-        <div class="te-podio-slot terceiro" id="podio3">
-          <div class="te-podio-medal">🥉</div>
-          <div class="te-podio-name" id="podio3Name"></div>
-          <div class="te-podio-pts" id="podio3Pts"></div>
-          <div class="te-podio-bar p3"></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-text">
+          <div class="flow-num">05</div>
+          <div class="flow-title">PRÓXIMO JOGO AUTOMÁTICO</div>
+          <p class="flow-desc">Acabou a partida? Puxe o próximo jogo automaticamente ou use escalação livre. O rodízio é gerenciado pelo app.</p>
         </div>
       </div>
 
-      <!-- Destaques -->
-      <div class="te-destaques">
-        <div class="te-section-title">⚡ Destaques do Dia</div>
-        <div class="te-destaques-grid" id="teDestaquesGrid"></div>
-      </div>
-
-      <!-- Ranking completo por jogador -->
-      <div class="te-ranking-full">
-        <div class="te-section-title">📊 Ranking Completo</div>
-        <div class="ranking-table">
-          <div class="rt-head rt-row-player">
-            <span>#</span><span>Jogador</span>
-            <span>J</span><span>V</span><span>D</span><span>Saldo</span><span>Pts</span>
-          </div>
-          <div id="teRankingBody"></div>
-        </div>
-      </div>
-
-      <!-- Ações -->
-      <div class="te-actions">
-        <button class="fe-btn secondary" onclick="gerarCardInstagram()">📸 Gerar card para Instagram</button>
-        <button class="fe-btn primary" onclick="novoTorneio()">⚽ Nova Pelada</button>
-      </div>
-
     </div>
+  </div>
+</section>
 
-    </div><!-- /torSub-placar -->
+<!-- DIFERENCIAIS -->
+<section class="diff-section">
+  <div class="diff-inner">
+    <p class="section-eyebrow reveal">POR QUE FTVSCORE</p>
+    <h2 class="section-title reveal">FEITO PARA <span>QUEM JOGA</span></h2>
+    <p class="section-sub reveal">Não é app de torneio. É o app da pelada de toda semana.</p>
+    <div class="section-divider reveal"></div>
 
-    <!-- ── Sub: FILA ── -->
-    <div class="tor-subcontent" id="torSub-fila">
-      <div class="fila-section" id="filaSection">
-        <div class="fila-title">📋 Fila de Duplas</div>
-        <div class="fila-chips" id="filaChips"></div>
+    <div class="diff-grid reveal-group">
+      <div class="diff-item">
+        <span class="diff-icon">⚡</span>
+        <div class="diff-title">RODÍZIO INTELIGENTE</div>
+        <p class="diff-desc">Fila gerada automaticamente. O sistema sabe quem entra, quem espera e qual dupla joga agora.</p>
       </div>
-    </div>
-
-    <!-- ── Sub: HISTÓRICO ── -->
-    <div class="tor-subcontent" id="torSub-historico">
-      <div class="hist-list" id="histList">
-        <div class="empty-hist">Nenhuma partida jogada ainda</div>
+      <div class="diff-item">
+        <span class="diff-icon">☁️</span>
+        <div class="diff-title">HISTÓRICO NA NUVEM</div>
+        <p class="diff-desc">Toda pelada fica salva. Acesse o ranking de qualquer celular, qualquer hora.</p>
       </div>
-    </div>
-
-  </div><!-- /screen-1 -->
-
-  <!-- ════ TELA 2: RANKING ════ -->
-  <div class="screen" id="screen-2">
-    <div class="section-title">🏆 Classificação</div>
-
-    <!-- Toggle por jogador / por dupla -->
-    <div class="rank-toggle">
-      <button class="rank-tog-btn active" id="rankTogPlayer" onclick="setRankView('player')">👤 Por Jogador</button>
-      <button class="rank-tog-btn"        id="rankTogDupla"  onclick="setRankView('dupla')">👥 Por Dupla</button>
-    </div>
-
-    <!-- Ranking por JOGADOR -->
-    <div id="rankViewPlayer">
-      <div class="ranking-table">
-        <div class="rt-head rth-player">
-          <span>#</span><span>Jogador</span>
-          <span>J</span><span>V</span><span>D</span><span>Saldo</span><span>Pts</span>
-        </div>
-        <div id="rankingPlayerBody"></div>
-      </div>
-      <div class="rank-legend">
-        J=Jogos · V=Vitórias · D=Derrotas · Saldo=diferença de pontos · Pts=V×3<br>
-        <span style="color:rgba(116,185,255,.6)">Stats acumulados de todas as duplas que o jogador participou</span>
-      </div>
-    </div>
-
-    <!-- Ranking por DUPLA -->
-    <div id="rankViewDupla" style="display:none">
-      <div class="ranking-table">
-        <div class="rt-head">
-          <span>#</span><span>Dupla</span>
-          <span>J</span><span>V</span><span>D</span><span>Saldo</span><span>Pts</span>
-        </div>
-        <div id="rankingBody"></div>
-      </div>
-      <div class="rank-legend">
-        J=Jogos · V=Vitórias · D=Derrotas · Saldo=diferença de pontos · Pts=V×3
+      <div class="diff-item">
+        <span class="diff-icon">🏆</span>
+        <div class="diff-title">RANKING ACUMULADO</div>
+        <p class="diff-desc">Quem manda no grupo? O ranking responde. Acompanhe a evolução semana a semana.</p>
       </div>
     </div>
   </div>
+</section>
 
-  <!-- TELA 3: placeholder (histórico movido para sub-aba do Torneio) -->
-  <div class="screen" id="screen-3"></div>
+<!-- PÚBLICOS -->
+<section style="padding: 100px 0;">
+  <div class="section" style="padding-top:0; padding-bottom:0;">
+    <p class="section-eyebrow reveal">PARA QUEM É</p>
+    <h2 class="section-title reveal">SERVE PRA <span>QUALQUER NÍVEL</span></h2>
+    <p class="section-sub reveal">Da pelada entre amigos ao CT profissional.</p>
+    <div class="section-divider reveal"></div>
 
-  <!-- ════ TELA 4: GERENCIAR DUPLAS ════ -->
-  <div class="screen" id="screen-4">
-    <div class="section-title">👥 Gerenciar Duplas</div>
-
-    <div class="gd-info-box">
-      💡 Aqui você gerencia mudanças durante a pelada: renomear jogadores, remover quem
-      saiu mais cedo, e reorganizar duplas. O histórico de partidas já jogadas nunca é apagado.
-    </div>
-
-    <!-- Lista de duplas -->
-    <div class="gd-section-label">Duplas na pelada</div>
-    <div id="gdDuplasList"></div>
-    <button class="gd-add-btn" onclick="openGdAdd()">➕ Adicionar nova dupla</button>
-
-    <!-- Reorganizar jogadores -->
-    <div class="gd-section-label" style="margin-top:22px;">🔀 Reorganizar jogadores</div>
-    <div class="gd-reorg-info">
-      Selecione um jogador de cada dupla. Você poderá <strong>trocar</strong> os jogadores
-      entre duplas, ou <strong>formar uma nova dupla</strong> com eles
-      (as duplas originais ficam inativas, histórico preservado).
-    </div>
-
-    <!-- Slots de seleção -->
-    <div class="gd-slots-row">
-      <div class="gd-slot" id="gdSlotABox">
-        <div class="gd-slot-label">🟡 Jogador A</div>
-        <div class="gd-slot-val" id="gdSlotA">— selecione —</div>
+    <div class="publicos-grid reveal-group">
+      <div class="publico-card">
+        <span class="publico-emoji">👨‍👩‍👦</span>
+        <div class="publico-title">GALERA DO BAIRRO</div>
+        <p class="publico-desc">Pelada informal toda semana? Chega de confusão na fila. O app organiza tudo na hora.</p>
       </div>
-      <div class="gd-slot-arrow">↔</div>
-      <div class="gd-slot" id="gdSlotBBox">
-        <div class="gd-slot-label">🔵 Jogador B</div>
-        <div class="gd-slot-val" id="gdSlotB">— selecione —</div>
+      <div class="publico-card">
+        <span class="publico-emoji">🎯</span>
+        <div class="publico-title">CTS E PROFESSORES</div>
+        <p class="publico-desc">Gerencie seu grupo de alunos com profissionalismo. Ranking, histórico e organização automática.</p>
       </div>
-    </div>
-
-    <!-- Preview + botões de ação -->
-    <div id="gdSwapPreview" style="display:none"></div>
-    <div id="gdSwapBtns" style="display:none" class="gd-action-btns">
-      <button class="gd-action-btn swap"    onclick="gdDoSwap()">
-        ⇄ Trocar de dupla
-        <span>mantém duplas originais, só troca os nomes</span>
-      </button>
-      <button class="gd-action-btn newdupla" onclick="gdFormNovaDupla()">
-        🆕 Formar nova dupla
-        <span>cria nova dupla com esses dois jogadores</span>
-      </button>
-    </div>
-
-    <!-- Grid de jogadores clicáveis -->
-    <div class="gd-swap-grid" id="gdSwapGrid"></div>
-
-  </div>
-
-  <!-- ════ TELA 5: TORNEIOS ANTERIORES ════ -->
-  <div class="screen" id="screen-5">
-    <div class="section-title">☁️ Peladas Anteriores</div>
-    <div class="th-info">Histórico salvo na nuvem — acessível de qualquer celular.</div>
-    <div id="thLoading" class="th-loading">🔄 Carregando...</div>
-    <div id="thEmpty"   class="th-empty"   style="display:none">Nenhuma pelada salva ainda.</div>
-    <div id="thList"    class="th-list"    style="display:none"></div>
-  </div>
-
-  <!-- ════ BOTTOM NAV ════ -->
-  <nav class="bottom-nav">
-
-    <!-- Setup -->
-    <button class="nav-tab active" id="tab0" onclick="goTab(0)">
-      <svg viewBox="0 0 24 24"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-      <span>Setup</span>
-    </button>
-
-    <!-- Torneio -->
-    <button class="nav-tab" id="tab1" onclick="goTab(1)">
-      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-      <span>Pelada</span>
-    </button>
-
-    <!-- Ranking -->
-    <button class="nav-tab" id="tab2" onclick="goTab(2)">
-      <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-      <span>Ranking</span>
-    </button>
-
-    <!-- Duplas -->
-    <button class="nav-tab" id="tab4" onclick="goTab(4)">
-      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-      <span>Duplas</span>
-    </button>
-
-    <!-- Torneios -->
-    <button class="nav-tab" id="tab5" onclick="goTab(5)">
-      <svg viewBox="0 0 24 24"><path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/></svg>
-      <span>Peladas</span>
-    </button>
-
-  </nav>
-
-</div><!-- /app -->
-
-<!-- MODAL: EDITAR DUPLA -->
-<div class="modal-bg" id="modalGdEdit">
-  <div class="modal" style="max-width:420px;">
-    <h3 id="gdEditTitle">✏️ Editar Dupla</h3>
-    <div class="modal-sub" id="gdEditStats"></div>
-
-    <div class="gd-edit-section">
-      <div class="gd-edit-label">✏️ Renomear jogadores</div>
-      <div class="gd-edit-row">
-        <input class="form-input" id="gdP1" placeholder="Jogador 1" maxlength="14">
-        <input class="form-input" id="gdP2" placeholder="Jogador 2" maxlength="14">
-      </div>
-      <button class="gd-modal-btn save" onclick="gdSaveNames()">Salvar nomes</button>
-    </div>
-
-    <div class="gd-edit-section" style="border-top:1px solid var(--border);padding-top:14px;margin-top:6px;">
-      <div class="gd-edit-label">Ações</div>
-      <button class="gd-modal-btn remove" id="gdBtnRemove" onclick="gdRemoveDupla()">
-        🚫 Remover dupla — histórico preservado
-      </button>
-      <button class="gd-modal-btn restore" id="gdBtnRestore" onclick="gdRestoreDupla()" style="display:none">
-        ↩ Reativar dupla
-      </button>
-    </div>
-
-    <div class="modal-btns" style="margin-top:14px;">
-      <button class="btn-cancel" style="width:100%" onclick="closeModal('modalGdEdit')">Fechar</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL: ADICIONAR DUPLA -->
-<div class="modal-bg" id="modalGdAdd">
-  <div class="modal" style="max-width:420px;">
-    <h3>➕ Nova Dupla</h3>
-    <div class="modal-sub">Entra uma nova dupla na pelada</div>
-
-    <!-- Sugestões de jogadores livres -->
-    <div id="gdFreeAgents" style="display:none"></div>
-
-    <div class="form-group" style="margin-bottom:10px;">
-      <label>Jogador 1</label>
-      <input class="form-input" id="gdNewP1" placeholder="Nome" maxlength="14">
-    </div>
-    <div class="form-group" style="margin-bottom:14px;">
-      <label>Jogador 2</label>
-      <input class="form-input" id="gdNewP2" placeholder="Nome" maxlength="14">
-    </div>
-
-    <div class="gd-add-note">
-      A nova dupla entra na fila e jogará contra todas as outras.
-    </div>
-
-    <div class="modal-btns" style="margin-top:14px;">
-      <button class="btn-cancel" onclick="closeModal('modalGdAdd')">Cancelar</button>
-      <button class="btn-ok"     onclick="gdConfirmAdd()">Adicionar</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL: TROCAR DE LADO -->
-<div class="modal-bg" id="modalTrocaLado">
-  <div class="modal">
-    <h3>↔ Trocar de Lado?</h3>
-    <div class="modal-sub" id="trocaLadoPlacar"></div>
-    <div class="modal-btns">
-      <button class="btn-cancel" onclick="recusarTrocaLado()">Não, continuar</button>
-      <button class="btn-ok"     onclick="confirmarTrocaLado()">Sim, trocar!</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL: RESULTADO -->
-<div class="modal-bg" id="modalFinish">
-  <div class="modal">
-    <h3>✓ Resultado Final</h3>
-    <div class="modal-sub" id="modalSub"></div>
-    <div class="modal-score">
-      <div class="modal-team ta">
-        <div class="mn" id="mfnA"></div>
-        <input class="score-inp" id="mfSA" type="number" min="0" max="99" value="0">
-      </div>
-      <div class="modal-x">×</div>
-      <div class="modal-team tb">
-        <div class="mn" id="mfnB"></div>
-        <input class="score-inp" id="mfSB" type="number" min="0" max="99" value="0">
-      </div>
-    </div>
-    <div class="modal-btns">
-      <button class="btn-cancel" onclick="closeModal('modalFinish')">Cancelar</button>
-      <button class="btn-ok"     onclick="confirmFinish()">Confirmar</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL: PUXAR JOGO -->
-<div class="modal-bg" id="modalPull">
-  <div class="modal" style="max-width:480px;max-height:88vh;overflow-y:auto;">
-    <h3>⚡ Puxar Jogo</h3>
-    <div class="modal-sub" id="modalPullSub">Escolha qual confronto jogar agora:</div>
-    <div id="pullList"></div>
-    <div class="modal-btns" style="margin-top:14px;">
-      <button class="btn-cancel" style="width:100%" onclick="closeModal('modalPull')">Cancelar</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL: CRIAR JOGO MANUAL (Fila vazia) -->
-<div class="modal-bg" id="modalCreateMatch">
-  <div class="modal" style="max-width:500px;">
-    <h3>⚡ Criar Nova Partida</h3>
-    <div class="modal-sub">Selecione as duplas para o confronto:</div>
-
-    <div class="form-group" style="margin-bottom:12px;">
-      <label>Dupla A</label>
-      <select class="form-input" id="createDuplaA" style="font-size:.9rem;">
-        <option value="">Selecione...</option>
-      </select>
-    </div>
-
-    <div class="form-group" style="margin-bottom:18px;">
-      <label>Dupla B</label>
-      <select class="form-input" id="createDuplaB" style="font-size:.9rem;">
-        <option value="">Selecione...</option>
-      </select>
-    </div>
-
-    <div class="modal-btns">
-      <button class="btn-cancel" onclick="closeModal('modalCreateMatch')">Cancelar</button>
-      <button class="btn-ok" onclick="confirmCreateMatch()">Confirmar</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL: ESCALAÇÃO LIVRE -->
-<div class="modal-bg" id="modalEscalacao">
-  <div class="modal" style="max-width:480px;max-height:90vh;overflow-y:auto;">
-    <h3>📋 Escalação Livre</h3>
-    <div class="modal-sub" id="escSub">Toque na 1ª dupla — ela será a Dupla A</div>
-    <div class="esc-legend">
-      <span class="esc-leg-a">■ Dupla A</span>
-      <span class="esc-leg-b">■ Dupla B</span>
-    </div>
-    <div class="esc-grid" id="escGrid"></div>
-    <div class="modal-btns" style="margin-top:16px;">
-      <button class="btn-cancel" style="width:100%" onclick="closeModal('modalEscalacao')">Cancelar</button>
-    </div>
-  </div>
-</div>
-
-<!-- OVERLAY: SPLASH / CAPA -->
-<div class="splash-ov" id="splashOv">
-  <div class="splash-inner">
-    <div class="splash-logo-wrap">
-      <img src="logo.png" alt="FTVScore" class="splash-logo">
-    </div>
-    <div class="splash-title">FTVScore</div>
-    <div class="splash-subtitle">Placar &amp; Ranking</div>
-    <div class="splash-divider"></div>
-    <p class="splash-desc">Placar inteligente para suas peladas. Rodízio automático, ranking em tempo real e histórico salvo na nuvem.</p>
-    <button class="splash-btn-primary" onclick="splashStart()">INICIAR NOVA PELADA</button>
-    <button class="splash-btn-secondary" onclick="splashRanking()">VER RANKING ATUAL</button>
-    <div class="splash-footer">Login via Google/Instagram em breve</div>
-  </div>
-
-  <!-- Navbar decorativa (todos inativos) -->
-  <div class="splash-nav">
-    <div class="splash-nav-item">
-      <svg viewBox="0 0 24 24"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-      <span>Setup</span>
-    </div>
-    <div class="splash-nav-item">
-      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-      <span>Pelada</span>
-    </div>
-    <div class="splash-nav-item">
-      <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-      <span>Ranking</span>
-    </div>
-    <div class="splash-nav-item">
-      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-      <span>Duplas</span>
-    </div>
-    <div class="splash-nav-item">
-      <svg viewBox="0 0 24 24"><path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/></svg>
-      <span>Peladas</span>
-    </div>
-  </div>
-</div>
-
-<!-- OVERLAY: CAMPEÃO -->
-<div class="winner-ov" id="winnerOv">
-  <div class="trophy">🏆</div>
-  <div class="w-title">Campeões!</div>
-  <div class="w-names" id="wNames"></div>
-  <div class="w-stats" id="wStats"></div>
-  <button class="w-btn" onclick="closeWinner()">Ver Ranking Final</button>
-</div>
-
-<!-- ══════════════════════════════════════
-     PLACAR FULLSCREEN (landscape celular)
-══════════════════════════════════════ -->
-<div class="fs-overlay" id="fsOverlay">
-
-  <!-- Topo: info da partida + timer + botão fechar -->
-  <div class="fs-top">
-    <div class="fs-match-info">
-      <span class="fs-match-num" id="fsMatchNum">Partida 1</span>
-      <span class="fs-fase-tag" id="fsFaseTag">Fase 1</span>
-    </div>
-    <div class="fs-timer" id="fsTimer">⏱ 00:00</div>
-    <button class="fs-close-btn" onclick="closeFullscreen()" title="Sair do fullscreen">✕</button>
-  </div>
-
-  <!-- Placar principal: 3 colunas lado a lado -->
-  <div class="fs-score-area">
-
-    <!-- DUPLA A — lado esquerdo -->
-    <div class="fs-team fs-team-a">
-      <div class="fs-names" id="fsNamesA"></div>
-      <div class="fs-score" id="fsScoreA" onclick="addScore('a')">0</div>
-      <div class="fs-btns">
-        <button class="fs-btn fs-plus" onclick="addScore('a')">+1</button>
-        <button class="fs-btn fs-minus" onclick="subScore('a')">−</button>
-      </div>
-    </div>
-
-    <!-- CENTRO: VS + finalizar -->
-    <div class="fs-center">
-      <div class="fs-vs">VS</div>
-      <button class="fs-finish-btn" onclick="openFinish()">✓ FIM</button>
-    </div>
-
-    <!-- DUPLA B — lado direito -->
-    <div class="fs-team fs-team-b">
-      <div class="fs-names" id="fsNamesB"></div>
-      <div class="fs-score" id="fsScoreB" onclick="addScore('b')">0</div>
-      <div class="fs-btns">
-        <button class="fs-btn fs-plus" onclick="addScore('b')">+1</button>
-        <button class="fs-btn fs-minus" onclick="subScore('b')">−</button>
-      </div>
-    </div>
-
-  </div>
-
-  <!-- Prompt interno: trocar de lado (visível dentro do fullscreen) -->
-  <div class="fs-swap-prompt" id="fsSwapPrompt">
-    <div class="fs-swap-box">
-      <div class="fs-swap-icon">↔</div>
-      <div class="fs-swap-title">Trocar de Lado?</div>
-      <div class="fs-swap-sub" id="fsSwapSub"></div>
-      <div class="fs-swap-btns">
-        <button class="fs-swap-btn fs-swap-no"  onclick="recusarTrocaLado()">Não</button>
-        <button class="fs-swap-btn fs-swap-yes" onclick="confirmarTrocaLado()">Sim, trocar!</button>
+      <div class="publico-card">
+        <span class="publico-emoji">🏖️</span>
+        <div class="publico-title">ARENAS E EVENTOS</div>
+        <p class="publico-desc">Para eventos maiores com múltiplos grupos. Tudo registrado, tudo no histórico.</p>
       </div>
     </div>
   </div>
+</section>
 
-</div>
-
-<!-- MODAL: SUGERIR ARENA -->
-<div class="modal-bg" id="modalSuggestArena">
-  <div class="modal" style="max-width:380px;position:relative;">
-    <button class="modal-close-btn" id="btnSuggestArenaClose" title="Fechar">✕</button>
-    <h3>🏟️ Sugerir Arena</h3>
-    <div class="modal-sub">Salva no seu dispositivo para uso futuro</div>
-    <div class="form-group" style="margin-bottom:10px;">
-      <label>Nome da Arena</label>
-      <input class="form-input" id="suggestArenaName" placeholder="Ex: Arena do Sol" maxlength="40">
-    </div>
-    <div class="form-group" style="margin-bottom:16px;">
-      <label>Cidade / Bairro</label>
-      <input class="form-input" id="suggestArenaCity" placeholder="Ex: Boa Viagem, Recife" maxlength="40">
-    </div>
-    <div class="modal-btns">
-      <button class="btn-cancel" onclick="cancelSuggestArena()">Cancelar</button>
-      <button class="btn-ok" onclick="saveSuggestArena()">Salvar</button>
-    </div>
+<!-- CTA FINAL -->
+<section class="cta-section">
+  <h2 class="cta-title reveal">PRONTO PRA<br><span>PRIMEIRA PELADA?</span></h2>
+  <p class="cta-sub reveal">Grátis, sem cadastro complicado.<br>Começa a jogar em menos de 2 minutos.</p>
+  <div class="cta-buttons reveal">
+    <a href="/app/" class="btn-hero-primary">CRIAR CONTA GRÁTIS →</a>
+    <a href="/app/" class="btn-entrar" style="padding:18px 32px; font-size:16px;">JÁ TENHO CONTA</a>
   </div>
-</div>
+</section>
 
-<script src="app.js"></script>
+<!-- FOOTER -->
+<footer>
+  <div>
+    <div class="footer-logo">FTVSCORE</div>
+    <div class="footer-sub" style="margin-top:4px;">PLACAR & RANKING · ftvscore.app.br</div>
+  </div>
+  <div class="footer-sub">© 2026 FTVScore. Todos os direitos reservados.</div>
+</footer>
+
 <script>
-/* ── Splash screen ── */
-function splashDismiss(then) {
-  const ov = document.getElementById('splashOv');
-  ov.classList.add('splash-fade-out');
-  setTimeout(() => { ov.classList.remove('show', 'splash-fade-out'); then(); }, 380);
-}
-function splashStart()   { splashDismiss(() => goTab(0)); }
-function splashRanking() { splashDismiss(() => goTab(2)); }
-
-/* ── Sub-abas do Torneio ── */
-function goTorneioSubTab(name) {
-  document.querySelectorAll('.tor-subtab').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.tor-subcontent').forEach(c => c.classList.remove('active'));
-  document.getElementById('torTab-' + name).classList.add('active');
-  document.getElementById('torSub-' + name).classList.add('active');
-  if (name === 'historico') renderHistorico();
-}
-
-/* ── Navegação do Setup Stepper ── */
-function setupGoNext() {
-  const active = document.querySelector('.setup-step.active');
-  const n = parseInt(active.id.replace('stepPanel', ''));
-  if (n < 3) goSetupStep(n + 1);
-}
-
-function goSetupStep(n) {
-  document.querySelectorAll('.setup-step').forEach(s => s.classList.remove('active'));
-  document.getElementById('stepPanel' + n).classList.add('active');
-  const footer = document.getElementById('setupNavFooter');
-  const btn    = document.getElementById('setupNextBtn');
-  if (n === 1) {
-    footer.style.display = 'block';
-    btn.textContent = 'PRÓXIMO: DEFINIR DUPLAS →';
-  } else if (n === 2) {
-    footer.style.display = 'block';
-    btn.textContent = 'PRÓXIMO: REVISAR →';
-  } else {
-    footer.style.display = 'none';
-    renderSetupReview();
-  }
-}
-
-function renderSetupReview() {
-  const total  = typeof numDuplas !== 'undefined' ? numDuplas * (numDuplas - 1) / 2 : '—';
-  const nd     = typeof numDuplas !== 'undefined' ? numDuplas : '—';
-  const arena  = (document.getElementById('cfgEventName').value || '').trim() || '—';
-  const dateRaw = document.getElementById('cfgDate').value;
-  const dateStr = dateRaw
-    ? new Date(dateRaw + 'T12:00').toLocaleDateString('pt-BR')
-    : '—';
-  const sLimit = typeof streakLimit !== 'undefined' ? streakLimit : 2;
-  const tLado  = typeof trocaLado  !== 'undefined' ? trocaLado  : false;
-  const streakTxt = (typeof numDuplas !== 'undefined' && numDuplas <= 4)
-    ? sLimit + '× vitórias seguidas'
-    : 'Rodízio';
-  const ladoTxt = tLado ? 'A cada 5 pts' : 'Não';
-
-  /* Nomes das duplas */
-  const duplaRows = [];
-  const grid = document.getElementById('duplasGrid');
-  if (grid && typeof numDuplas !== 'undefined') {
-    for (let i = 0; i < numDuplas; i++) {
-      const p1El = grid.querySelector('#p1_' + i);
-      const p2El = grid.querySelector('#p2_' + i);
-      const p1 = (p1El && p1El.value.trim()) || ('Jogador ' + (i * 2 + 1));
-      const p2 = (p2El && p2El.value.trim()) || ('Jogador ' + (i * 2 + 2));
-      duplaRows.push(`<div class="review-row">
-        <span class="review-label">D${i + 1}</span>
-        <span class="review-val">${p1} &amp; ${p2}</span>
-      </div>`);
+// Scroll reveal
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(el => {
+    if (el.isIntersecting) {
+      el.target.classList.add('visible');
     }
-  }
+  });
+}, { threshold: 0.15 });
 
-  document.getElementById('reviewContent').innerHTML = `
-    <div class="review-row"><span class="review-label">Arena</span><span class="review-val">${arena}</span></div>
-    <div class="review-row"><span class="review-label">Data</span><span class="review-val">${dateStr}</span></div>
-    <div class="review-row"><span class="review-label">Duplas</span><span class="review-val">${nd}</span></div>
-    <div class="review-row"><span class="review-label">Partidas</span><span class="review-val">${total}</span></div>
-    <div class="review-row"><span class="review-label">Sair da quadra</span><span class="review-val">${streakTxt}</span></div>
-    <div class="review-row"><span class="review-label">Troca de lado</span><span class="review-val">${ladoTxt}</span></div>
-    <div class="review-section-title">Duplas</div>
-    ${duplaRows.join('')}
-  `;
-}
-
-/* ── Data no header do passo 1 ── */
-(function() {
-  const el = document.getElementById('step1DateDisplay');
-  if (el) el.textContent = new Date().toLocaleDateString('pt-BR');
-})();
+document.querySelectorAll('.reveal, .reveal-group').forEach(el => observer.observe(el));
 </script>
 </body>
 </html>
