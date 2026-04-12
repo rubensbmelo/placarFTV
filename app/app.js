@@ -49,6 +49,7 @@ async function salvarTorneioSupabase() {
       ranking:      ranked,
       partidas:     histItems,
       duplas:       duplas,
+      user_id:      (typeof currentUser !== 'undefined' && currentUser) ? currentUser.id : null,
     };
     await sbFetch('/torneios', {
       method: 'POST',
@@ -64,7 +65,11 @@ async function salvarTorneioSupabase() {
 
 async function buscarTorneiosSupabase() {
   try {
-    const data = await sbFetch('/torneios?select=*&order=criado_em.desc&limit=50');
+    let path = '/torneios?select=*&order=criado_em.desc&limit=50';
+    if (typeof currentUser !== 'undefined' && currentUser?.id) {
+      path += `&or=(user_id.eq.${currentUser.id},user_id.is.null)`;
+    }
+    const data = await sbFetch(path);
     return data || [];
   } catch(e) {
     console.warn('⚠️ Erro ao buscar histórico:', e.message);

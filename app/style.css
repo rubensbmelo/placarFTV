@@ -1953,6 +1953,87 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:
   margin-top: 16px;
 }
 
+/* ── Google login button na splash ── */
+.splash-btn-google {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 13px 20px;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 10px;
+  color: rgba(245,240,232,0.8);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: background .2s;
+}
+.splash-btn-google:hover { background: rgba(255,255,255,0.12); }
+
+/* Estado logado na splash */
+.splash-user-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 12px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 13px;
+  letter-spacing: 1px;
+  color: rgba(245,240,232,0.55);
+}
+.splash-user-check { color: #4ade80; font-size: 14px; }
+.splash-logout-link {
+  background: none;
+  border: none;
+  color: rgba(245,240,232,0.35);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 13px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  padding: 0;
+}
+.splash-logout-link:hover { color: rgba(245,240,232,0.65); }
+
+/* ── Auth no header ── */
+.top-header { position: relative; }
+.header-auth {
+  position: absolute;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.header-user-label {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: rgba(255,255,255,0.4);
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.header-logout-btn {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 6px;
+  color: rgba(255,255,255,0.5);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: background .2s;
+}
+.header-logout-btn:hover { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.8); }
+
 /* Navbar decorativa na splash (todos inativos) */
 .splash-nav {
   position: absolute;
