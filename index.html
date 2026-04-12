@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FTVScore — Placar & Ranking</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:ital,wght@0,400;0,600;0,700;0,900;1,700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -713,8 +714,8 @@ footer {
     </div>
   </a>
   <div class="nav-actions">
-    <a href="/app/" class="btn-entrar">ENTRAR</a>
-    <a href="/app/" class="btn-criar">CRIAR CONTA</a>
+    <a href="/app/" id="navEntrar" class="btn-entrar">ENTRAR</a>
+    <a href="/app/" id="navCriar"  class="btn-criar">CRIAR CONTA</a>
   </div>
 </nav>
 
@@ -931,8 +932,8 @@ footer {
   <h2 class="cta-title reveal">PRONTO PRA<br><span>PRIMEIRA PELADA?</span></h2>
   <p class="cta-sub reveal">Grátis, sem cadastro complicado.<br>Começa a jogar em menos de 2 minutos.</p>
   <div class="cta-buttons reveal">
-    <a href="/app/" class="btn-hero-primary">CRIAR CONTA GRÁTIS →</a>
-    <a href="/app/" class="btn-entrar" style="padding:18px 32px; font-size:16px;">JÁ TENHO CONTA</a>
+    <a href="/app/" id="ctaCriar"  class="btn-hero-primary">CRIAR CONTA GRÁTIS →</a>
+    <a href="/app/" id="ctaEntrar" class="btn-entrar" style="padding:18px 32px; font-size:16px;">JÁ TENHO CONTA</a>
   </div>
 </section>
 
@@ -956,6 +957,74 @@ const observer = new IntersectionObserver((entries) => {
 }, { threshold: 0.15 });
 
 document.querySelectorAll('.reveal, .reveal-group').forEach(el => observer.observe(el));
+
+/* ── Auth ── */
+const SB_URL = 'https://lcnjpkhclfknuqlqvfrt.supabase.co';
+const SB_KEY = 'sb_publishable_8alUHjoR19NRF8IS6AiwkA_7bJMaI64';
+const _sb    = window.supabase.createClient(SB_URL, SB_KEY);
+let currentUser = null;
+let _loginPoll  = null;
+
+async function loginWithGoogle() {
+  const { data, error } = await _sb.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: window.location.origin + '/app/',
+      skipBrowserRedirect: true,
+    },
+  });
+  if (error || !data?.url) return;
+  const w = 480, h = 600;
+  const left = Math.round((screen.width  - w) / 2);
+  const top  = Math.round((screen.height - h) / 2);
+  const popup = window.open(data.url, 'ftvAuth',
+    `width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no`);
+  if (_loginPoll) clearInterval(_loginPoll);
+  _loginPoll = setInterval(async () => {
+    if (popup?.closed) { clearInterval(_loginPoll); return; }
+    const { data: { session } } = await _sb.auth.getSession();
+    if (session) { clearInterval(_loginPoll); window.location.href = '/app/'; }
+  }, 1000);
+}
+
+async function doLogout() {
+  await _sb.auth.signOut();
+  currentUser = null;
+  updateAuthUI();
+}
+
+function updateAuthUI() {
+  const navEntrar = document.getElementById('navEntrar');
+  const navCriar  = document.getElementById('navCriar');
+  const ctaCriar  = document.getElementById('ctaCriar');
+  const ctaEntrar = document.getElementById('ctaEntrar');
+  const login  = (e) => { e.preventDefault(); loginWithGoogle(); };
+  const logout = (e) => { e.preventDefault(); doLogout(); };
+  if (currentUser) {
+    const name = (currentUser.user_metadata?.full_name || currentUser.email || '').split(' ')[0];
+    if (navEntrar) { navEntrar.textContent = `Olá, ${name}`; navEntrar.href = '/app/'; navEntrar.onclick = null; }
+    if (navCriar)  { navCriar.textContent  = 'Sair';         navCriar.href  = '#';     navCriar.onclick  = logout; }
+    if (ctaCriar)  { ctaCriar.textContent  = 'ABRIR APP →';  ctaCriar.href  = '/app/'; ctaCriar.onclick  = null; }
+    if (ctaEntrar) { ctaEntrar.textContent = 'Sair';         ctaEntrar.href = '#';     ctaEntrar.onclick = logout; }
+  } else {
+    if (navEntrar) { navEntrar.textContent = 'ENTRAR';            navEntrar.href = '#'; navEntrar.onclick = login; }
+    if (navCriar)  { navCriar.textContent  = 'CRIAR CONTA';       navCriar.href  = '#'; navCriar.onclick  = login; }
+    if (ctaCriar)  { ctaCriar.textContent  = 'CRIAR CONTA GRÁTIS →'; ctaCriar.href = '#'; ctaCriar.onclick = login; }
+    if (ctaEntrar) { ctaEntrar.textContent = 'JÁ TENHO CONTA';    ctaEntrar.href = '#'; ctaEntrar.onclick = login; }
+  }
+}
+
+async function initAuth() {
+  const { data: { session } } = await _sb.auth.getSession();
+  if (session?.user) currentUser = session.user;
+  updateAuthUI();
+  _sb.auth.onAuthStateChange((_ev, session) => {
+    currentUser = session?.user || null;
+    updateAuthUI();
+  });
+}
+
+initAuth();
 </script>
 </body>
 </html>
