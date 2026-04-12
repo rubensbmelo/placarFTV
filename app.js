@@ -283,7 +283,7 @@ function renderEventBar() {
   } else {
     bar.style.display      = 'flex';
     resetBar.style.display = 'none';
-    name.textContent = eventName || 'Torneio de FuteVôlei';
+    name.textContent = eventName || 'Pelada de FuteVôlei';
     if (eventDate) {
       const d        = new Date(eventDate + 'T12:00:00');
       const months   = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -301,8 +301,8 @@ function renderEventBar() {
 function confirmReset() {
   const jogadas = doneCount || 0;
   const msg = jogadas > 0
-    ? `Zerar o torneio?\n\n⚠️ Isso apagará:\n• ${jogadas} partida${jogadas>1?'s':''} jogada${jogadas>1?'s':''}\n• Todo o histórico e ranking\n• Configurações das duplas\n\nEssa ação não pode ser desfeita.`
-    : `Zerar o torneio?\n\nIsso limpará todas as configurações.`;
+    ? `Zerar a pelada?\n\n⚠️ Isso apagará:\n• ${jogadas} partida${jogadas>1?'s':''} jogada${jogadas>1?'s':''}\n• Todo o histórico e ranking\n• Configurações das duplas\n\nEssa ação não pode ser desfeita.`
+    : `Zerar a pelada?\n\nIsso limpará todas as configurações.`;
   if (!confirm(msg)) return;
   novoTorneio();
 }
@@ -1869,7 +1869,7 @@ function gdSaveNames() {
 
 function gdRemoveDupla() {
   const d = duplas.find(x=>x.id===gdEditId);
-  if (!confirm(`Remover "${d.p1} & ${d.p2}" do torneio?\n\n✅ Histórico preservado.\n❌ Partidas pendentes canceladas.`)) return;
+  if (!confirm(`Remover "${d.p1} & ${d.p2}" da pelada?\n\n✅ Histórico preservado.\n❌ Partidas pendentes canceladas.`)) return;
   d.inactive = true;
   for (const key of [...pendingSet]) {
     const [a,b]=key.split('-').map(Number);
@@ -2124,7 +2124,7 @@ async function renderTorneiosAnteriores() {
     card.innerHTML = `
       <div class="th-card-top">
         <div class="th-card-info">
-          <div class="th-card-nome">${t.evento_nome || 'Torneio de FuteVôlei'}</div>
+          <div class="th-card-nome">${t.evento_nome || 'Pelada de FuteVôlei'}</div>
           <div class="th-card-data">📅 ${data} às ${hora}</div>
         </div>
         <div class="th-card-stats">

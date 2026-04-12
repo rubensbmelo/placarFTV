@@ -103,11 +103,11 @@
         <div id="reviewContent"></div>
       </div>
 
-      <button class="btn-start" onclick="startTorneio()">INICIAR TORNEIO 🏐</button>
+      <button class="btn-start" onclick="startTorneio()">INICIAR PELADA 🏐</button>
 
       <div id="resetSection" style="margin-top:10px;display:none">
         <button class="btn-reset" onclick="confirmReset()">
-          🗑 Zerar torneio em andamento
+          🗑 Zerar pelada em andamento
         </button>
       </div>
     </div>
@@ -139,12 +139,12 @@
         <div class="event-bar-name" id="eventBarName"></div>
         <div class="event-bar-date" id="eventBarDate"></div>
       </div>
-      <button class="event-bar-reset" onclick="confirmReset()" title="Zerar torneio">🗑</button>
+      <button class="event-bar-reset" onclick="confirmReset()" title="Zerar pelada">🗑</button>
     </div>
 
     <!-- Botão zerar — sempre visível na tela do torneio -->
     <div class="reset-bar" id="resetBar">
-      <button class="btn-reset-inline" onclick="confirmReset()">🗑 Zerar torneio</button>
+      <button class="btn-reset-inline" onclick="confirmReset()">🗑 Zerar pelada</button>
     </div>
 
     <!-- Progress + timer geral -->
@@ -157,7 +157,7 @@
         <div class="progress-fill" id="progressFill" style="width:0%"></div>
       </div>
       <div class="torneio-timer-row">
-        <span class="tt-label">⏱ Torneio em andamento</span>
+        <span class="tt-label">⏱ Pelada em andamento</span>
         <span class="tt-val" id="torneioTimer">00:00:00</span>
       </div>
     </div>
@@ -244,7 +244,7 @@
             ⚡ Continuar com Fase 2
           </button>
           <button class="fe-btn danger" onclick="encerrarTorneio()">
-            🏆 Encerrar Torneio
+            🏆 Encerrar Pelada
           </button>
         </div>
       </div>
@@ -278,7 +278,7 @@
             ← Voltar
           </button>
           <button class="fe-btn danger"    onclick="encerrarTorneio()">
-            🏆 Encerrar Torneio
+            🏆 Encerrar Pelada
           </button>
         </div>
       </div>
@@ -305,7 +305,7 @@
             + Adicionar Mais Partidas
           </button>
           <button class="fe-btn danger"  onclick="encerrarTorneio()">
-            🏆 Encerrar Torneio
+            🏆 Encerrar Pelada
           </button>
         </div>
       </div>
@@ -317,7 +317,7 @@
       <!-- Header -->
       <div class="te-header">
         <div class="te-trophy">🏆</div>
-        <h1 class="te-title">Torneio Encerrado!</h1>
+        <h1 class="te-title">Pelada Encerrada!</h1>
         <div class="te-event-info" id="teEventInfo"></div>
         <div class="te-save-badge" id="teSaveBadge" style="display:none"></div>
         <div class="te-stats-row">
@@ -371,7 +371,7 @@
       <!-- Ações -->
       <div class="te-actions">
         <button class="fe-btn secondary" onclick="gerarCardInstagram()">📸 Gerar card para Instagram</button>
-        <button class="fe-btn primary" onclick="novoTorneio()">⚽ Novo Torneio</button>
+        <button class="fe-btn primary" onclick="novoTorneio()">⚽ Nova Pelada</button>
       </div>
 
     </div>
@@ -443,12 +443,12 @@
     <div class="section-title">👥 Gerenciar Duplas</div>
 
     <div class="gd-info-box">
-      💡 Aqui você gerencia mudanças durante o torneio: renomear jogadores, remover quem
+      💡 Aqui você gerencia mudanças durante a pelada: renomear jogadores, remover quem
       saiu mais cedo, e reorganizar duplas. O histórico de partidas já jogadas nunca é apagado.
     </div>
 
     <!-- Lista de duplas -->
-    <div class="gd-section-label">Duplas no torneio</div>
+    <div class="gd-section-label">Duplas na pelada</div>
     <div id="gdDuplasList"></div>
     <button class="gd-add-btn" onclick="openGdAdd()">➕ Adicionar nova dupla</button>
 
@@ -493,10 +493,10 @@
 
   <!-- ════ TELA 5: TORNEIOS ANTERIORES ════ -->
   <div class="screen" id="screen-5">
-    <div class="section-title">☁️ Torneios Anteriores</div>
+    <div class="section-title">☁️ Peladas Anteriores</div>
     <div class="th-info">Histórico salvo na nuvem — acessível de qualquer celular.</div>
     <div id="thLoading" class="th-loading">🔄 Carregando...</div>
-    <div id="thEmpty"   class="th-empty"   style="display:none">Nenhum torneio salvo ainda.</div>
+    <div id="thEmpty"   class="th-empty"   style="display:none">Nenhuma pelada salva ainda.</div>
     <div id="thList"    class="th-list"    style="display:none"></div>
   </div>
 
@@ -512,7 +512,7 @@
     <!-- Torneio -->
     <button class="nav-tab" id="tab1" onclick="goTab(1)">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-      <span>Torneio</span>
+      <span>Pelada</span>
     </button>
 
     <!-- Ranking -->
@@ -530,7 +530,7 @@
     <!-- Torneios -->
     <button class="nav-tab" id="tab5" onclick="goTab(5)">
       <svg viewBox="0 0 24 24"><path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/></svg>
-      <span>Torneios</span>
+      <span>Peladas</span>
     </button>
 
   </nav>
@@ -572,7 +572,7 @@
 <div class="modal-bg" id="modalGdAdd">
   <div class="modal" style="max-width:420px;">
     <h3>➕ Nova Dupla</h3>
-    <div class="modal-sub">Entra uma nova dupla no torneio</div>
+    <div class="modal-sub">Entra uma nova dupla na pelada</div>
 
     <!-- Sugestões de jogadores livres -->
     <div id="gdFreeAgents" style="display:none"></div>
@@ -697,7 +697,7 @@
     <div class="splash-subtitle">Placar &amp; Ranking</div>
     <div class="splash-divider"></div>
     <p class="splash-desc">Placar inteligente para suas peladas. Rodízio automático, ranking em tempo real e histórico salvo na nuvem.</p>
-    <button class="splash-btn-primary" onclick="splashStart()">INICIAR NOVO TORNEIO</button>
+    <button class="splash-btn-primary" onclick="splashStart()">INICIAR NOVA PELADA</button>
     <button class="splash-btn-secondary" onclick="splashRanking()">VER RANKING ATUAL</button>
     <div class="splash-footer">Login via Google/Instagram em breve</div>
   </div>
@@ -710,7 +710,7 @@
     </div>
     <div class="splash-nav-item">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-      <span>Torneio</span>
+      <span>Pelada</span>
     </div>
     <div class="splash-nav-item">
       <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
@@ -722,7 +722,7 @@
     </div>
     <div class="splash-nav-item">
       <svg viewBox="0 0 24 24"><path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/></svg>
-      <span>Torneios</span>
+      <span>Peladas</span>
     </div>
   </div>
 </div>
