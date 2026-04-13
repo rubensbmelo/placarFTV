@@ -981,9 +981,9 @@ async function loginWithGoogle() {
     `width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no`);
   if (_loginPoll) clearInterval(_loginPoll);
   _loginPoll = setInterval(async () => {
-    if (popup?.closed) { clearInterval(_loginPoll); return; }
     const { data: { session } } = await _sb.auth.getSession();
-    if (session) { clearInterval(_loginPoll); window.location.href = '/app/'; }
+    if (session) { clearInterval(_loginPoll); window.location.href = '/app/'; return; }
+    if (popup?.closed) { clearInterval(_loginPoll); }
   }, 1000);
 }
 

@@ -21,6 +21,7 @@
   <div class="top-header" id="topHeader">
     <img src="../logo.png" alt="FTVScore" class="top-logo">
     <div class="header-auth" id="headerAuth" style="display:none">
+      <img id="headerUserAvatar" class="header-user-avatar" src="" alt="" style="display:none">
       <span class="header-user-label" id="headerUserLabel"></span>
       <button class="header-logout-btn" onclick="doLogout()">Sair</button>
     </div>
@@ -919,46 +920,41 @@ function renderSetupReview() {
 let currentUser = null;
 const _sb = window.supabase.createClient(SB_URL, SB_KEY);
 
-async function initAuth() {
-  const { data: { session } } = await _sb.auth.getSession();
-  if (session?.user) { currentUser = session.user; updateAuthUI(); }
-  _sb.auth.onAuthStateChange((_event, session) => {
-    currentUser = session?.user || null;
-    updateAuthUI();
-  });
-}
-
-async function loginWithGoogle() {
-  await _sb.auth.signInWithOAuth({
-    provider: 'google',
-    options: { redirectTo: window.location.href },
-  });
-}
-
 async function doLogout() {
   await _sb.auth.signOut();
-  currentUser = null;
-  updateAuthUI();
+  window.location.href = '/';
 }
 
 function updateAuthUI() {
-  const headerAuth    = document.getElementById('headerAuth');
-  const headerLabel   = document.getElementById('headerUserLabel');
-  const splashGoogle  = document.getElementById('splashGoogleBtn');
-  const splashUser    = document.getElementById('splashUserInfo');
-  const splashName    = document.getElementById('splashUserName');
+  const headerAuth   = document.getElementById('headerAuth');
+  const headerLabel  = document.getElementById('headerUserLabel');
+  const headerAvatar = document.getElementById('headerUserAvatar');
   if (currentUser) {
-    const name = currentUser.user_metadata?.full_name || currentUser.email || '';
+    const name   = currentUser.user_metadata?.full_name || currentUser.email || '';
+    const avatar = currentUser.user_metadata?.avatar_url || '';
     if (headerAuth)   { headerAuth.style.display  = 'flex'; }
-    if (headerLabel)  { headerLabel.textContent    = name; }
-    if (splashGoogle) { splashGoogle.style.display = 'none'; }
-    if (splashUser)   { splashUser.style.display   = 'flex'; }
-    if (splashName)   { splashName.textContent     = name; }
+    if (headerLabel)  { headerLabel.textContent   = name; }
+    if (headerAvatar) {
+      if (avatar) { headerAvatar.src = avatar; headerAvatar.style.display = 'block'; }
+      else        { headerAvatar.style.display = 'none'; }
+    }
   } else {
-    if (headerAuth)   { headerAuth.style.display   = 'none'; }
-    if (splashGoogle) { splashGoogle.style.display = ''; }
-    if (splashUser)   { splashUser.style.display   = 'none'; }
+    if (headerAuth)   { headerAuth.style.display  = 'none'; }
+    if (headerAvatar) { headerAvatar.style.display = 'none'; }
   }
+}
+
+async function initAuth() {
+  const { data: { session } } = await _sb.auth.getSession();
+  if (session?.user) { currentUser = session.user; updateAuthUI(); }
+  _sb.auth.onAuthStateChange((event, session) => {
+    currentUser = session?.user || null;
+    updateAuthUI();
+    // Fecha o popup OAuth após login bem-sucedido
+    if (event === 'SIGNED_IN' && window.opener && !window.opener.closed) {
+      window.close();
+    }
+  });
 }
 
 initAuth();
