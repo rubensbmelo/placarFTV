@@ -47,6 +47,14 @@
         </div>
       </div>
 
+      <div class="seg-section">
+        <div class="seg-label">MODO</div>
+        <div class="tog-group">
+          <button class="tog-btn sel" id="modoBtn0" onclick="setModo(false)">🏖️ PELADA</button>
+          <button class="tog-btn"     id="modoBtn1" onclick="setModo(true)">🏆 TORNEIO</button>
+        </div>
+      </div>
+
       <div class="seg-section" id="streakSection" style="display:none">
         <div class="seg-label">SAIR DA QUADRA</div>
         <div class="tog-group">
@@ -67,6 +75,11 @@
       <div class="info-box" id="infoBox">
         ⚽ <strong id="infoN">6 duplas</strong> →
         <span id="infoDesc">rodada inicial: <strong id="infoRodadaPairs">3 jogos</strong> em sequência (D1×D2, D3×D4, D5×D6). Depois: <strong>ganhou ou perdeu, sai da quadra</strong> — sempre entram as 2 próximas da fila. Espera máx.: <strong id="infoWait">~3 jogos</strong>.</span>
+      </div>
+
+      <div class="info-box info-box--torneio" id="infoBoxTorneio" style="display:none">
+        🏆 <strong>Todos contra todos</strong> + playoffs por campanha —
+        vencedor espera 1 jogo, perdedor espera 2 jogos.
       </div>
     </div>
 
@@ -246,8 +259,11 @@
         </div>
 
         <div class="fe-buttons">
-          <button class="fe-btn primary" onclick="openFase2Builder()">
+          <button class="fe-btn primary" id="btnFase1ToFase2" onclick="openFase2Builder()">
             ⚡ Continuar com Fase 2
+          </button>
+          <button class="fe-btn primary" id="btnFase1ToPlayoff" onclick="initPlayoffs()" style="display:none">
+            🏆 Iniciar Playoffs
           </button>
           <button class="fe-btn danger" onclick="encerrarTorneio()">
             🏆 Encerrar Pelada
@@ -853,12 +869,15 @@ function renderSetupReview() {
     }
   }
 
+  const modTxt = (typeof modoTorneio !== 'undefined' && modoTorneio) ? '🏆 Torneio' : '🏖️ Pelada';
+
   document.getElementById('reviewContent').innerHTML = `
+    <div class="review-row"><span class="review-label">Modo</span><span class="review-val">${modTxt}</span></div>
     <div class="review-row"><span class="review-label">Arena</span><span class="review-val">${arena}</span></div>
     <div class="review-row"><span class="review-label">Data</span><span class="review-val">${dateStr}</span></div>
     <div class="review-row"><span class="review-label">Duplas</span><span class="review-val">${nd}</span></div>
     <div class="review-row"><span class="review-label">Partidas</span><span class="review-val">${total}</span></div>
-    <div class="review-row"><span class="review-label">Sair da quadra</span><span class="review-val">${streakTxt}</span></div>
+    ${!(typeof modoTorneio !== 'undefined' && modoTorneio) ? `<div class="review-row"><span class="review-label">Sair da quadra</span><span class="review-val">${streakTxt}</span></div>` : ''}
     <div class="review-row"><span class="review-label">Troca de lado</span><span class="review-val">${ladoTxt}</span></div>
     <div class="review-section-title">Duplas</div>
     ${duplaRows.join('')}

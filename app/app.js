@@ -156,6 +156,19 @@ let gdEditId = null;
 let swapSelA = null;
 let swapSelB = null;
 
+// Modo Torneio
+let modoTorneio = false;
+
+// Playoff state (Modo Torneio — Fase 2 automática)
+let playoffActive       = false;
+let playoffInitialPairs = [];
+let playoffInitialIdx   = 0;
+let playoffInitialDone  = false;
+let playoffWaitingId    = null;
+let playoffWinners      = [];
+let playoffLosers       = [];
+let playoffQueue        = [];
+
 // ══════════════════════════════════════════════════════════
 //  LOCALSTORAGE
 // ══════════════════════════════════════════════════════════
@@ -173,6 +186,10 @@ function saveState() {
       forcedMatch,
       rodadaInicialDone, rodadaInicialPairs, rodadaInicialIdx,
       torneioElapsed,
+      modoTorneio,
+      playoffActive, playoffInitialPairs, playoffInitialIdx,
+      playoffInitialDone, playoffWaitingId,
+      playoffWinners, playoffLosers, playoffQueue,
     }));
   } catch(e) { console.warn('localStorage cheio:', e); }
 }
@@ -206,6 +223,15 @@ function loadState() {
     trocaLado  = s.trocaLado  ?? false;
     sideSwapped = s.sideSwapped ?? false;
     lastSwapAt  = s.lastSwapAt  ?? -1;
+    modoTorneio        = s.modoTorneio        ?? false;
+    playoffActive      = s.playoffActive      ?? false;
+    playoffInitialPairs = s.playoffInitialPairs ?? [];
+    playoffInitialIdx  = s.playoffInitialIdx  ?? 0;
+    playoffInitialDone = s.playoffInitialDone ?? false;
+    playoffWaitingId   = s.playoffWaitingId   ?? null;
+    playoffWinners     = s.playoffWinners     ?? [];
+    playoffLosers      = s.playoffLosers      ?? [];
+    playoffQueue       = s.playoffQueue       ?? [];
     return duplas.length > 0;
   } catch(e) { return false; }
 }
@@ -225,7 +251,17 @@ function stepDuplas(d) {
   const streakSection = document.getElementById('streakSection');
   const infoDesc      = document.getElementById('infoDesc');
   const infoBox       = document.getElementById('infoBox');
+  const infoBoxT      = document.getElementById('infoBoxTorneio');
 
+  if (modoTorneio) {
+    if (infoBox)  infoBox.style.display  = 'none';
+    if (infoBoxT) infoBoxT.style.display = numDuplas === 2 ? 'none' : '';
+    streakSection.style.display = 'none';
+    buildDuplasGrid();
+    return;
+  }
+
+  if (infoBoxT) infoBoxT.style.display = 'none';
   if (infoBox) infoBox.style.display = numDuplas === 2 ? 'none' : '';
 
   if (numDuplas >= 6) {
@@ -242,9 +278,16 @@ function stepDuplas(d) {
   buildDuplasGrid();
 }
 
+function setModo(isTorneio) {
+  modoTorneio = isTorneio;
+  document.getElementById('modoBtn0').classList.toggle('sel',  !isTorneio);
+  document.getElementById('modoBtn1').classList.toggle('sel',   isTorneio);
+  stepDuplas(0);
+}
+
 function selStreak(n) {
   streakLimit = n;
-  document.querySelectorAll('.tog-btn').forEach(b => b.classList.toggle('sel', +b.dataset.s === n));
+  document.querySelectorAll('.tog-btn[data-s]').forEach(b => b.classList.toggle('sel', +b.dataset.s === n));
   if (numDuplas <= 4) {
     const infoDesc = document.getElementById('infoDesc');
     if (infoDesc) infoDesc.innerHTML = `<strong>vencedor fica na quadra</strong> até ${n}× vitória${n>1?'s':''} seguida${n>1?'s':''}. Perdedor vai pro fim da fila.`;
@@ -348,6 +391,10 @@ function startTorneio() {
   fase2Matches = []; fase2Index = 0;
   torneioElapsed = 0; torneioTimerBase = null;
   matchStarted = false;
+
+  playoffActive = false; playoffInitialPairs = []; playoffInitialIdx = 0;
+  playoffInitialDone = false; playoffWaitingId = null;
+  playoffWinners = []; playoffLosers = []; playoffQueue = [];
 
   queue = duplas.map(d => d.id);
   wait  = {}; duplas.forEach(d => wait[d.id] = 0);
@@ -628,6 +675,70 @@ function updateQueueAfterMatch(winner, loser) {
   }
 }
 
+// ══════════════════════════════════════════════════════════
+//  PLAYOFFS — Modo Torneio (Fase 2 automática)
+// ══════════════════════════════════════════════════════════
+function initPlayoffs() {
+  const ranked = duplas.filter(d => !d.inactive)
+    .sort((a,b) => b.pts!==a.pts ? b.pts-a.pts : b.saldo!==a.saldo ? b.saldo-a.saldo : b.v-a.v);
+
+  playoffInitialPairs = [];
+  for (let i = 0; i + 1 < ranked.length; i += 2)
+    playoffInitialPairs.push({ dA: ranked[i].id, dB: ranked[i+1].id });
+
+  playoffWaitingId   = ranked.length % 2 === 1 ? ranked[ranked.length - 1].id : null;
+  playoffInitialIdx  = 0;
+  playoffInitialDone = false;
+  playoffWinners     = [];
+  playoffLosers      = [];
+  playoffQueue       = [];
+  playoffActive      = true;
+
+  fase = 2; fase2Matches = []; fase2Index = 0;
+
+  document.getElementById('fase1End').style.display = 'none';
+  enterMatchArea();
+  startTorneioTimer();
+  saveState();
+  loadNextMatch();
+}
+
+function findNextPlayoffMatch() {
+  if (!playoffInitialDone) {
+    if (playoffInitialIdx < playoffInitialPairs.length)
+      return playoffInitialPairs[playoffInitialIdx];
+    playoffInitialDone = true;
+    const waitList = playoffWaitingId !== null ? [playoffWaitingId] : [];
+    playoffQueue = [...playoffWinners, ...waitList, ...playoffLosers];
+  }
+  if (playoffQueue.length >= 2)
+    return { dA: playoffQueue[0], dB: playoffQueue[1] };
+  return null;
+}
+
+function updatePlayoffQueueAfterMatch(winner, loser) {
+  if (!playoffInitialDone) {
+    playoffWinners.push(winner);
+    playoffLosers.push(loser);
+    playoffInitialIdx++;
+    if (playoffInitialIdx >= playoffInitialPairs.length) {
+      playoffInitialDone = true;
+      const waitList = playoffWaitingId !== null ? [playoffWaitingId] : [];
+      playoffQueue = [...playoffWinners, ...waitList, ...playoffLosers];
+    }
+    return;
+  }
+  // Vencedor espera 1 jogo, perdedor espera 2 jogos (máx 2)
+  const rest = playoffQueue.filter(id => id !== winner && id !== loser && !duplas[id]?.inactive);
+  playoffQueue = [
+    ...(rest[0] !== undefined ? [rest[0]] : []),
+    ...(rest[1] !== undefined ? [rest[1]] : []),
+    winner,
+    ...rest.slice(2),
+    loser,
+  ];
+}
+
 function previewNextMatchesF1(n = 3) {
   const results = [];
   let simDone  = rodadaInicialDone;
@@ -680,6 +791,10 @@ function loadNextMatch() {
     const r = findNextMatch();
     if (!r) { showFase1End(); return; }
     setupMatch(r.dA, r.dB);
+  } else if (playoffActive) {
+    const r = findNextPlayoffMatch();
+    if (!r) { confirmarEncerrarTorneio(); return; }
+    setupMatch(r.dA, r.dB);
   } else {
     if (fase2Index >= fase2Matches.length) { showFase2Paused(); return; }
     const m = fase2Matches[fase2Index];
@@ -704,6 +819,18 @@ function setupMatch(dA, dB) {
     document.getElementById('escalacaoBtn').style.display   = 'block';
     document.getElementById('proximasCard').style.display = 'block';
     renderProximas();
+  } else if (playoffActive) {
+    const isInitial = !playoffInitialDone;
+    document.getElementById('progressFill').style.width = '100%';
+    document.getElementById('progressTxt').textContent  = isInitial
+      ? `Playoffs · Confronto inicial ${playoffInitialIdx + 1} de ${playoffInitialPairs.length}`
+      : `Playoffs · Partida ${doneCount + 1}`;
+    document.getElementById('progressPct').textContent  = '';
+    document.getElementById('faseTag').textContent      = '🏆 PLAYOFFS — Por Campanha';
+    document.getElementById('faseTag').className        = 'fase-tag fase-playoff';
+    document.getElementById('pullBtn').style.display      = 'none';
+    document.getElementById('escalacaoBtn').style.display = 'none';
+    renderProximasPlayoff();
   } else {
     const pct = fase2Matches.length > 0 ? Math.round(fase2Index / fase2Matches.length * 100) : 0;
     document.getElementById('progressFill').style.width = pct + '%';
@@ -815,6 +942,8 @@ function confirmFinish() {
     } else {
       updateQueueAfterMatch(winner, loser);
     }
+  } else if (playoffActive) {
+    updatePlayoffQueueAfterMatch(winner, loser);
   }
 
   renderRanking();
@@ -838,6 +967,12 @@ function showFase1End() {
   document.getElementById('matchArea').style.display = 'none';
   document.getElementById('fase1End').style.display  = 'block';
   renderRankingInline('rankingF1');
+
+  const btnFase2   = document.getElementById('btnFase1ToFase2');
+  const btnPlayoff = document.getElementById('btnFase1ToPlayoff');
+  if (btnFase2)   btnFase2.style.display   = modoTorneio ? 'none' : '';
+  if (btnPlayoff) btnPlayoff.style.display = modoTorneio ? '' : 'none';
+
   saveState();
 }
 
@@ -1320,6 +1455,49 @@ function renderFila() {
   if (!currentMatch) return;
   const {dA, dB} = currentMatch;
 
+  // Playoff queue display
+  if (playoffActive) {
+    [dA, dB].forEach(id => {
+      const d = duplas[id];
+      const chip = document.createElement('div');
+      chip.className = 'fila-chip em-quadra';
+      chip.innerHTML = `<div class="fc-pos">🏆 em quadra</div><div class="fc-name">${d.p1}<br>${d.p2}</div>`;
+      chips.appendChild(chip);
+    });
+    if (!playoffInitialDone) {
+      for (let i = playoffInitialIdx + 1; i < playoffInitialPairs.length; i++) {
+        const par = playoffInitialPairs[i];
+        [par.dA, par.dB].forEach(id => {
+          const d = duplas[id];
+          const chip = document.createElement('div');
+          chip.className = 'fila-chip';
+          chip.innerHTML = `<div class="fc-pos">Confronto ${i+1} – aguarda</div><div class="fc-name">${d.p1}<br>${d.p2}</div>`;
+          chips.appendChild(chip);
+        });
+      }
+      if (playoffWaitingId !== null) {
+        const d = duplas[playoffWaitingId];
+        const chip = document.createElement('div');
+        chip.className = 'fila-chip urgente';
+        chip.innerHTML = `<div class="fc-pos">aguarda 1º resultado</div><div class="fc-name">${d.p1}<br>${d.p2}</div>`;
+        chips.appendChild(chip);
+      }
+    } else {
+      const shown = new Set([dA, dB]);
+      let filaPos = 1;
+      playoffQueue.forEach((id) => {
+        if (shown.has(id)) return;
+        const d = duplas[id];
+        if (!d || d.inactive) return;
+        const chip = document.createElement('div');
+        chip.className = 'fila-chip';
+        chip.innerHTML = `<div class="fc-pos">${filaPos++}º na fila</div><div class="fc-name">${d.p1}<br>${d.p2}</div>`;
+        chips.appendChild(chip);
+      });
+    }
+    return;
+  }
+
   if (!rodadaInicialDone) {
     [dA, dB].forEach(id => {
       const d = duplas[id];
@@ -1402,6 +1580,46 @@ function renderProximasF2() {
     list.appendChild(item);
   });
   document.getElementById('proximasCard').style.display = rest.length ? 'block' : 'none';
+}
+
+function renderProximasPlayoff() {
+  const list = document.getElementById('proximasList');
+  list.innerHTML = '';
+
+  let previews = [];
+  if (!playoffInitialDone) {
+    for (let i = playoffInitialIdx + 1; i < Math.min(playoffInitialIdx + 4, playoffInitialPairs.length); i++) {
+      previews.push(playoffInitialPairs[i]);
+    }
+  } else {
+    // Simulate next 3 from playoffQueue (skip current pair)
+    const simQ = [...playoffQueue];
+    for (let step = 0; step < 3 && simQ.length >= 4; step++) {
+      const [a, b, ...rest] = simQ;
+      previews.push({ dA: a, dB: b });
+      simQ.splice(0, 2);
+      simQ.push(a, b);
+    }
+    if (simQ.length >= 2 && previews.length < 3) {
+      previews.push({ dA: simQ[0], dB: simQ[1] });
+    }
+  }
+
+  previews.forEach((m, i) => {
+    const d1 = duplas[m.dA], d2 = duplas[m.dB];
+    if (!d1 || !d2) return;
+    const item = document.createElement('div');
+    item.className = 'prox-item';
+    item.innerHTML = `
+      <div class="prox-num">${doneCount + 2 + i}</div>
+      <div class="prox-teams">
+        <span class="pa">${d1.p1} & ${d1.p2}</span>
+        <span class="px">×</span>
+        <span class="pb">${d2.p1} & ${d2.p2}</span>
+      </div>`;
+    list.appendChild(item);
+  });
+  document.getElementById('proximasCard').style.display = previews.length ? 'block' : 'none';
 }
 
 function renderRanking() {
@@ -2228,8 +2446,12 @@ function restoreUI() {
   document.getElementById('cfgDate').value      = eventDate  || '';
   document.getElementById('cfgEventName').value = eventName  || '';
   document.getElementById('stepDuplas').textContent = numDuplas;
+  const modoBtn0 = document.getElementById('modoBtn0');
+  const modoBtn1 = document.getElementById('modoBtn1');
+  if (modoBtn0) modoBtn0.classList.toggle('sel', !modoTorneio);
+  if (modoBtn1) modoBtn1.classList.toggle('sel',  modoTorneio);
   stepDuplas(0);
-  document.querySelectorAll('.tog-btn').forEach(b=>b.classList.toggle('sel',+b.dataset.s===streakLimit));
+  document.querySelectorAll('.tog-btn[data-s]').forEach(b=>b.classList.toggle('sel',+b.dataset.s===streakLimit));
   document.getElementById('trocaLadoSim').classList.toggle('sel',  trocaLado);
   document.getElementById('trocaLadoNao').classList.toggle('sel', !trocaLado);
   stepDuplas(0);
@@ -2248,6 +2470,9 @@ function restoreUI() {
 
   if (fase===1 && pendingSet.size===0 && totalMatches>0) {
     showFase1End();
+  } else if (fase===2 && playoffActive) {
+    enterMatchArea();
+    loadNextMatch();
   } else if (fase===2 && fase2Index>=fase2Matches.length) {
     showFase2Paused();
   } else {

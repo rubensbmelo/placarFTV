@@ -62,6 +62,8 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:
 
 .info-box{background:rgba(243,156,18,.07);border:1px solid rgba(243,156,18,.2);border-radius:12px;padding:12px 16px;margin-top:10px;font-size:.8rem;letter-spacing:1px;color:rgba(255,255,255,.5);line-height:1.6;}
 .info-box strong{color:var(--sun);}
+.info-box--torneio{background:rgba(212,175,55,.09);border-color:rgba(212,175,55,.3);}
+.info-box--torneio strong{color:#d4af37;}
 
 .duplas-grid{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;}
 .dupla-row{display:grid;grid-template-columns:auto 1fr 1fr;gap:8px;align-items:center;}
@@ -296,6 +298,7 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:
 .fase-tag{display:inline-block;padding:5px 14px;border-radius:20px;font-family:'Bebas Neue',sans-serif;font-size:.82rem;letter-spacing:2px;margin-bottom:10px;}
 .fase-tag.fase1{background:rgba(243,156,18,.15);color:var(--sun);border:1px solid rgba(243,156,18,.3);}
 .fase-tag.fase2{background:rgba(116,185,255,.15);color:var(--sky);border:1px solid rgba(116,185,255,.3);}
+.fase-tag.fase-playoff{background:rgba(212,175,55,.18);color:#d4af37;border:1px solid rgba(212,175,55,.4);}
 
 /* ── PAINEL FIM DE FASE ── */
 .fase-end-card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:24px 18px;text-align:center;}
@@ -439,6 +442,8 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:
 .fase-tag{display:inline-block;padding:5px 14px;border-radius:20px;font-family:'Bebas Neue',sans-serif;font-size:.82rem;letter-spacing:2px;margin-bottom:10px;}
 .fase-tag.fase1{background:rgba(243,156,18,.15);color:var(--sun);border:1px solid rgba(243,156,18,.3);}
 .fase-tag.fase2{background:rgba(116,185,255,.15);color:var(--sky);border:1px solid rgba(116,185,255,.3);}
+.fase-tag.fase-playoff{background:rgba(212,175,55,.18);color:#d4af37;border:1px solid rgba(212,175,55,.4);}
+.fase-tag.fase-playoff{background:rgba(212,175,55,.18);color:#d4af37;border:1px solid rgba(212,175,55,.4);}
 .fase-end-card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:24px 18px;text-align:center;}
 .fe-icon{font-size:3rem;margin-bottom:10px;}
 .fase-end-card h2{font-family:'Bebas Neue',sans-serif;font-size:1.9rem;letter-spacing:3px;color:var(--sun);margin-bottom:8px;}
